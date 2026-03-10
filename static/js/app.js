@@ -901,9 +901,9 @@ class StockNexusEngine {
 // Initialize the app when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     try {
-        new IMSApp();
+        window.StockApp = new StockNexusEngine();
     } catch (error) {
-        console.error('Failed to initialize IMS App:', error);
+        console.error('Failed to initialize StockNexus App:', error);
         // Show a fallback notification
         const notification = document.createElement('div');
         notification.className = 'alert alert-danger';
