@@ -275,9 +275,12 @@
                 datasets: [{
                     label: 'Sales Revenue',
                     data: [12000, 19000, 15000, 25000, 22000, 30000, 28000, 32000, 35000, 40000, 38000, 45000],
-                    borderColor: 'rgb(49, 130, 206)',
-                    backgroundColor: 'rgba(49, 130, 206, 0.1)',
-                    borderWidth: 3,
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                    borderWidth: 4,
+                    pointBackgroundColor: '#6366f1',
+                    pointBorderColor: '#ffffff',
+                    pointHoverRadius: 6,
                     fill: true,
                     tension: 0.4
                 }]
@@ -290,18 +293,22 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: {
-                            display: false
-                        }
+                        legend: { display: false }
                     },
                     scales: {
                         y: {
                             beginAtZero: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
                             ticks: {
+                                color: '#94a3b8',
                                 callback: function (value) {
                                     return '$' + value.toLocaleString();
                                 }
                             }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#94a3b8' }
                         }
                     }
                 }

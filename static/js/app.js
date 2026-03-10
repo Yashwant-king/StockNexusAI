@@ -776,10 +776,71 @@ class StockNexusEngine {
                 }, 500);
 
                 console.log(`Updated ${id}: ${value}`);
-            } else {
-                console.warn(`Element with id '${id}' not found`);
             }
         });
+
+        // Generate AI Insights
+        this.generateAIInsights(metrics);
+    }
+
+    generateAIInsights(metrics) {
+        const insightsList = document.getElementById('aiInsightsList');
+        if (!insightsList) return;
+
+        const insights = [];
+
+        // Analysis 1: Stock Health
+        if (metrics.low_stock_count > 0) {
+            insights.push({
+                type: 'warning',
+                icon: 'fa-exclamation-triangle',
+                text: `Nexus AI detects ${metrics.low_stock_count} critical low-stock items. Immediate restocking recommended to avoid revenue loss.`
+            });
+        } else if (metrics.total_products > 0) {
+            insights.push({
+                type: 'success',
+                icon: 'fa-check-circle',
+                text: 'Inventory levels are currently optimized. Stock health is within safe operational parameters.'
+            });
+        }
+
+        // Analysis 2: Revenue Efficiency
+        if (metrics.total_revenue > 0 && metrics.total_products > 0) {
+            const avgRev = metrics.total_revenue / metrics.total_products;
+            if (avgRev > 1000) {
+                insights.push({
+                    type: 'success',
+                    icon: 'fa-trending-up',
+                    text: `High efficiency detected: Average revenue per SKU is ${this.formatCurrency(avgRev)}. Focus on top-performing assets.`
+                });
+            }
+        }
+
+        // Analysis 3: Expiry Risks
+        if (metrics.near_expiry_count > 0) {
+            insights.push({
+                type: 'danger',
+                icon: 'fa-clock',
+                text: `${metrics.near_expiry_count} items are approaching expiry. AI strategy: Implement "First-to-Expire" discounting to minimize wastage.`
+            });
+        }
+
+        // Default if no data
+        if (insights.length === 0) {
+            insights.push({
+                type: 'info',
+                icon: 'fa-info-circle',
+                text: 'Waiting for fresh data synchronization... Upload a CSV to initialize intelligent business monitoring.'
+            });
+        }
+
+        // Render Insights
+        insightsList.innerHTML = insights.map(insight => `
+            <div class="insight-item ${insight.type}">
+                <i class="fas ${insight.icon} text-${insight.type}"></i>
+                <span>${insight.text}</span>
+            </div>
+        `).join('');
     }
 
     debounce(func, wait) {
