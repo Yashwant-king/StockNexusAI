@@ -1,0 +1,11 @@
+product_id,product_name,quantity_stock,minimum_stock_level,total_revenue,expiry_date
+1,Laptop Pro,150,50,25000.00,15/12/24
+2,Wireless Mouse,75,30,1500.00,20/11/24
+3,USB Cable,200,100,800.00,10/01/25
+4,Monitor 24",45,20,9000.00,25/12/24
+5,Keyboard,120,40,3600.00,30/11/24
+6,Webcam,60,25,1800.00,05/12/24
+7,Headphones,90,35,2700.00,15/01/25
+8,Tablet,30,15,12000.00,20/12/24
+9,Printer,25,10,8000.00,10/11/24
+10,Scanner,40,20,6000.00,25/01/25 
