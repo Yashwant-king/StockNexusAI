@@ -328,6 +328,7 @@ class StockNexusEngine {
 
         // Check if this is a file upload form
         const isFileUpload = form.id === 'uploadForm';
+        const isAddItemForm = form.id === 'addItemForm';
 
         // Set a timeout to prevent infinite loading
         const timeoutId = setTimeout(() => {
@@ -350,6 +351,17 @@ class StockNexusEngine {
                     }
                 } else {
                     this.showNotification('Please select a file to upload', 'error');
+                }
+            } else if (isAddItemForm) {
+                // Handle single item addition
+                const response = await this.submitForm(formData, '/add_item');
+                if (response.success) {
+                    this.showNotification(response.message, 'success');
+                    form.reset();
+                    // Refresh the dashboard stats instantly 
+                    await this.loadDashboardData();
+                } else {
+                    this.showNotification(response.error || 'Failed to add item', 'error');
                 }
             } else {
                 // Handle other form submissions
