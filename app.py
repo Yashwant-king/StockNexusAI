@@ -146,6 +146,53 @@ def bill_page():
     except:
         return render_template('bill.html', products=[])
 
+@app.route('/barcodes')
+def barcodes_page():
+    """Page to print barcodes for all inventory items"""
+    try:
+        df = db.get_all_items()
+        items = []
+        if df is not None and not df.empty:
+            df = df.drop(columns=['created_at'], errors='ignore')
+            for _, r in df.iterrows():
+                items.append({
+                    'id': str(r.get('product_id', '')),
+                    'name': str(r.get('product_name', '')),
+                    'price': float(r.get('total_revenue', 0))
+                })
+        return render_template('barcodes.html', items=items)
+    except Exception as e:
+        print(f"Barcode error: {e}")
+        return render_template('barcodes.html', items=[])
+
+@app.route('/purchase-order')
+def purchase_order_page():
+    """Auto-generate a PO for low stock items"""
+    try:
+        df = db.get_all_items()
+        low_stock_items = []
+        if df is not None and not df.empty:
+            df['quantity_stock'] = pd.to_numeric(df['quantity_stock'], errors='coerce').fillna(0)
+            df['minimum_stock_level'] = pd.to_numeric(df['minimum_stock_level'], errors='coerce').fillna(0)
+            low = df[df['quantity_stock'] <= df['minimum_stock_level']]
+            for _, r in low.iterrows():
+                stock = int(r.get('quantity_stock', 0))
+                min_stock = int(r.get('minimum_stock_level', 0))
+                # Suggest reordering enough to be twice the minimum stock level
+                suggested_qty = max(min_stock * 2 - stock, 10)
+                
+                low_stock_items.append({
+                    'id': str(r.get('product_id', '')),
+                    'name': str(r.get('product_name', '')),
+                    'stock': stock,
+                    'min_level': min_stock,
+                    'reorder_qty': suggested_qty
+                })
+        return render_template('po.html', items=low_stock_items)
+    except Exception as e:
+        print(f"PO error: {e}")
+        return render_template('po.html', items=[])
+
 @app.route('/api/export-csv')
 def export_csv():
     """Download inventory as CSV file"""

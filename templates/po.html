@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Purchase Order — StockNexus AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { background:#f8fafc; color:#1e293b; font-family:'Inter',sans-serif; }
+        
+        .navbar{background:#1e293b;display:flex;justify-content:space-between;padding:16px 32px;color:#fff;align-items:center;height:60px;}
+        .brand{font-weight:800;font-size:1.2rem;}
+        .actions{display:flex;gap:12px;}
+        .btn{padding:8px 16px;border-radius:6px;font-size:0.9rem;font-weight:600;cursor:pointer;border:none;transition:0.2s;display:flex;align-items:center;gap:6px;}
+        .btn-print{background:#4f46e5;color:#fff;}
+        .btn-print:hover{background:#4338ca;}
+        .btn-back{background:rgba(255,255,255,0.1);color:#fff;text-decoration:none;}
+        
+        .po-container{max-width:800px;margin:32px auto;background:#fff;padding:48px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.05);border:1px solid #e2e8f0;}
+        .head-flex{display:flex;justify-content:space-between;border-bottom:2px solid #e2e8f0;padding-bottom:24px;margin-bottom:32px;}
+        
+        .c-details{display:flex;flex-direction:column;gap:4px;font-size:0.95rem;color:#475569;}
+        .c-name{font-size:1.5rem;font-weight:800;color:#0f172a;}
+        
+        .po-title{text-align:right;}
+        .po-title h1{font-weight:900;color:#4f46e5;font-size:2rem;letter-spacing:-1px;}
+        
+        .supplier-info{background:#f1f5f9;padding:16px;border-radius:8px;margin-bottom:32px;font-size:0.95rem;color:#475569;}
+        .supplier-info strong{color:#0f172a;}
+
+        table{width:100%;border-collapse:collapse;margin-bottom:48px;}
+        th{background:#f8fafc;color:#64748b;font-weight:700;text-transform:uppercase;font-size:0.75rem;padding:12px 16px;text-align:left;border-bottom:2px solid #e2e8f0;}
+        td{padding:16px;border-bottom:1px solid #e2e8f0;font-size:0.95rem;}
+        
+        .total-box{float:right;width:300px;background:#f8fafc;padding:24px;border-radius:8px;border:1px solid #e2e8f0;}
+        .t-row{display:flex;justify-content:space-between;margin-bottom:8px;font-size:0.95rem;color:#64748b;}
+        .t-bold{color:#0f172a;font-weight:800;font-size:1.2rem;border-top:1px solid #cbd5e1;padding-top:16px;margin-top:16px;}
+        
+        .footer{text-align:center;margin-top:100px;font-size:0.85rem;color:#94a3b8;border-top:1px dashed #e2e8f0;padding-top:24px;}
+        
+        @media print {
+            body{background:#fff;}
+            .navbar{display:none;}
+            .po-container{box-shadow:none;border:none;margin:0;padding:0;}
+            .btn{display:none;}
+        }
+    </style>
+</head>
+<body>
+
+    <div class="navbar">
+        <div class="brand">🏪 Kirana Store PO</div>
+        <div class="actions">
+            <a href="/inventory" class="btn btn-back">Back to Inventory</a>
+            <button class="btn btn-print" onclick="window.print()"><i class="fas fa-print"></i> Generate PDF</button>
+        </div>
+    </div>
+
+    <div class="po-container">
+        <div class="head-flex">
+            <div class="c-details">
+                <div class="c-name">Kirana Store</div>
+                <div>Main Market Road, City Center</div>
+                <div>GSTIN: 22AAAAA0000A1Z5</div>
+                <div>Phone: +91 98765 43210</div>
+            </div>
+            <div class="po-title">
+                <h1>PURCHASE ORDER</h1>
+                <div style="font-weight:bold;color:#1e293b;margin-top:8px;">PO-#<script>document.write(Math.floor(Math.random() * 10000) + 5000)</script></div>
+                <div style="color:#64748b;">Date: <script>document.write(new Date().toLocaleDateString('en-GB'))</script></div>
+            </div>
+        </div>
+
+        <div class="supplier-info">
+            <span style="font-size:0.8rem;text-transform:uppercase;font-weight:800;color:#64748b;display:block;margin-bottom:8px;">To Wholesale Supplier:</span>
+            <strong>ABC Distributors / Local Mandi</strong><br>
+            Please supply the following items as per standard market rates.<br>
+            Delivery required within 2 Days.
+        </div>
+
+        {% if items %}
+        <table>
+            <thead>
+                <tr>
+                    <th width="5%">S.No</th>
+                    <th width="45%">Item Name</th>
+                    <th width="15%">Current Stock</th>
+                    <th width="15%">Min Required</th>
+                    <th width="20%">ORDER QUANTITY</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td style="color:#64748b;">{{ loop.index }}</td>
+                    <td style="font-weight:700;color:#0f172a;">{{ item.name }}</td>
+                    <td style="color:#ef4444;font-weight:600;">{{ item.stock }}</td>
+                    <td style="color:#64748b;">{{ item.min_level }}</td>
+                    <td style="font-weight:800;color:#4f46e5;font-size:1.1rem;">{{ item.reorder_qty }} Units</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="total-box">
+            <div class="t-row">
+                <span>Total Items Requested:</span>
+                <span style="font-weight:700;color:#0f172a;">{{ items|length }} Items</span>
+            </div>
+            <div class="t-row t-bold">
+                <span>Status:</span>
+                <span style="color:#eab308;">PENDING</span>
+            </div>
+        </div>
+        
+        <div style="clear:both;"></div>
+
+        <div class="footer">
+            Note: This is an automatically generated purchase order by StockNexus AI.<br>
+            Please confirm receipt via WhatsApp. Authorized Signatory: Kirana Owner.
+        </div>
+        
+        {% else %}
+        
+        <div style="text-align:center;padding:48px 0;">
+            <i class="fas fa-check-circle" style="font-size:4rem;color:#22c55e;margin-bottom:16px;"></i>
+            <h2 style="color:#0f172a;margin-bottom:8px;">Stock is Healthy!</h2>
+            <p style="color:#64748b;">No items are currently below their minimum stock level.<br>Purchase order not required.</p>
+        </div>
+        
+        {% endif %}
+
+    </div>
+
+</body>
+</html>

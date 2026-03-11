@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Print Barcodes — StockNexus AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { background:#060818; color:#e2e8f0; font-family:'Inter',sans-serif; }
+        
+        /* Navigation (only screen) */
+        .navbar{background:rgba(6,8,24,0.8);backdrop-filter:blur(20px);border-bottom:1px solid rgba(99,102,241,0.2);position:sticky;top:0;z-index:1000;}
+        .navbar-container{max-width:1400px;margin:0 auto;padding:0 2rem;height:68px;display:flex;justify-content:space-between;align-items:center;}
+        .navbar-brand{font-size:1.4rem;font-weight:800;color:#fff;text-decoration:none;display:flex;align-items:center;gap:0.6rem;}
+        
+        .page-header { padding:2rem; max-width:1000px; margin:0 auto; display:flex; justify-content:space-between; align-items:flex-end; }
+        .page-title { font-size:2rem; font-weight:800; color:#fff; }
+        .page-sub { color:#94a3b8; font-size:0.9rem; }
+        .btn-print { background:linear-gradient(135deg,#6366f1,#8b5cf6); border:none; color:#fff; padding:12px 24px; border-radius:10px; font-weight:700; font-size:1rem; cursor:pointer; font-family:'Inter',sans-serif; transition:all 0.2s; box-shadow:0 4px 15px rgba(99,102,241,0.3); }
+        .btn-print:hover { transform:translateY(-2px); box-shadow:0 8px 25px rgba(99,102,241,0.4); }
+
+        /* A4 Page container */
+        .a4-container { background:#fff; width:210mm; min-height:297mm; margin:0 auto 2rem; padding:10mm; display:flex; flex-wrap:wrap; gap:5mm; box-shadow:0 10px 40px rgba(0,0,0,0.5); }
+        
+        /* Barcode Sticker */
+        .barcode-sticker { width:calc(33.333% - 5mm); border:1px dashed #cbd5e1; border-radius:8px; padding:10px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; box-sizing:border-box; background:#fff; }
+        .b-shop { font-size:11px; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px; }
+        .b-name { font-size:12px; font-weight:700; color:#0f172a; margin-bottom:2px; max-height:28px; overflow:hidden; }
+        .b-price { font-size:14px; font-weight:800; color:#0f172a; margin-top:2px; }
+        .b-code { max-width:100%; height:45px; margin:4px 0; }
+        
+        /* Print Styles */
+        @media print {
+            body { background: #fff; padding: 0; margin: 0; }
+            .navbar, .page-header { display: none !important; }
+            .a4-container { box-shadow: none; margin: 0; padding: 0; width: 100%; }
+            .barcode-sticker { border: 1px dashed transparent; } /* Hidden mostly to save ink, or keep to cut */
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="/dashboard" class="navbar-brand">🏪 StockNexus AI</a>
+            <a href="/inventory" style="color:#a5b4fc;text-decoration:none;font-size:0.9rem;font-weight:600;"><i class="fas fa-arrow-left"></i> Back to Inventory</a>
+        </div>
+    </nav>
+
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">🏷️ Print Barcode Labels</h1>
+            <p class="page-sub">Print this page on sticky label paper to attach 100% scannable barcodes to your products.</p>
+        </div>
+        <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Print Labels</button>
+    </div>
+
+    <!-- Printable Area container that simulates A4 Width -->
+    <div class="a4-container" id="barcodesContainer">
+        {% if items %}
+            {% for item in items %}
+                <!-- Making 2 labels per product as default so we have enough stickers -->
+                {% for i in range(2) %}
+                <div class="barcode-sticker">
+                    <div class="b-shop">KIRANA STORE</div>
+                    <div class="b-name">{{ item.name }}</div>
+                    <svg class="b-code" data-id="{{ '1000'+item.id }}"></svg>
+                    <div class="b-price">₹{{ "%.0f"|format(item.price) }}</div>
+                </div>
+                {% endfor %}
+            {% endfor %}
+        {% else %}
+            <p style="text-align:center;width:100%;color:#94a3b8;font-size:1.2rem;margin-top:2rem;">No items to print. Add items to inventory first.</p>
+        {% endif %}
+    </div>
+
+    <script>
+        // Generate actual barcodes using JsBarcode
+        document.addEventListener('DOMContentLoaded', function() {
+            const svgs = document.querySelectorAll('.b-code');
+            svgs.forEach(svg => {
+                const id = svg.getAttribute('data-id');
+                try {
+                    JsBarcode(svg, id, {
+                        format: "CODE128",
+                        lineColor: "#000",
+                        width: 1.5,
+                        height: 40,
+                        displayValue: true,
+                        fontSize: 12,
+                        margin: 0
+                    });
+                } catch(e) { console.log(e); }
+            });
+        });
+    </script>
+</body>
+</html>

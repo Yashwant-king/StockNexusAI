@@ -102,9 +102,15 @@
     <div class="page-container">
 
         <!-- Header -->
-        <div class="page-header">
-            <h1 class="page-title">📦 Inventory Management</h1>
-            <p class="page-subtitle">View all products, check stock levels, and remove items you no longer need.</p>
+        <div class="page-header" style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:2rem;">
+            <div>
+                <h1 class="page-title">📦 Inventory Management</h1>
+                <p class="page-subtitle">View all products, check stock levels, and remove items you no longer need.</p>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <a href="/barcodes" style="background:rgba(99,102,241,0.15); color:#a5b4fc; border:1px solid rgba(99,102,241,0.3); padding:10px 16px; border-radius:10px; text-decoration:none; font-size:0.85rem; font-weight:600; transition:all 0.2s;"><i class="fas fa-barcode"></i> Print Barcodes</a>
+                <a href="/purchase-order" style="background:rgba(239,68,68,0.15); color:#fca5a5; border:1px solid rgba(239,68,68,0.3); padding:10px 16px; border-radius:10px; text-decoration:none; font-size:0.85rem; font-weight:600; transition:all 0.2s;"><i class="fas fa-file-invoice-dollar"></i> Generate PO</a>
+            </div>
         </div>
 
         <!-- Stats -->
