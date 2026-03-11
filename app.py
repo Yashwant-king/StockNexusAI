@@ -533,6 +533,65 @@ def smart_insights():
         except:
             pass
 
+        # ── 4. PROFIT MARGIN ESTIMATOR ──
+        try:
+            total_rev = df_clean['total_revenue'].astype(float).sum()
+            if total_rev > 0:
+                estimated_cost = total_rev * 0.72  # Industry avg: 72% cost for kirana
+                estimated_profit = total_rev - estimated_cost
+                margin_pct = (estimated_profit / total_rev) * 100
+                insights.append({
+                    "icon": "💰", "type": "profit",
+                    "text": f"Estimated Profit: ₹{estimated_profit:,.0f} ({margin_pct:.0f}% margin) from ₹{total_rev:,.0f} total revenue"
+                })
+        except:
+            pass
+
+        # ── 5. STOCK HEALTH SCORE ──
+        try:
+            total = len(df_clean)
+            if total > 0:
+                healthy = len(df_clean[df_clean['quantity_stock'].astype(float) > df_clean['minimum_stock_level'].astype(float)])
+                score = int((healthy / total) * 100)
+                emoji = "🟢" if score >= 80 else "🟡" if score >= 50 else "🔴"
+                insights.append({
+                    "icon": emoji, "type": "health",
+                    "text": f"Stock Health Score: {score}% — {healthy}/{total} products are above minimum level"
+                })
+        except:
+            pass
+
+        # ── 6. TOP & BOTTOM PRODUCTS ──
+        try:
+            if len(df_clean) >= 3:
+                top3 = df_clean.nlargest(3, 'total_revenue')
+                top_names = ', '.join([f"{r['product_name']} (₹{float(r['total_revenue']):,.0f})" for _, r in top3.iterrows()])
+                insights.append({
+                    "icon": "🥇", "type": "ranking",
+                    "text": f"Top Earners: {top_names}"
+                })
+                bottom = df_clean.nsmallest(1, 'total_revenue').iloc[0]
+                insights.append({
+                    "icon": "🐌", "type": "ranking",
+                    "text": f"Slowest Product: {bottom['product_name']} (₹{float(bottom['total_revenue']):,.0f}) — consider replacing or promoting"
+                })
+        except:
+            pass
+
+        # ── 7. KHATA PAYMENT REMINDERS ──
+        try:
+            customers = db.get_all_customers()
+            overdue = [c for c in customers if c['balance'] > 0]
+            if overdue:
+                total_due = sum(c['balance'] for c in overdue)
+                top_debtor = max(overdue, key=lambda c: c['balance'])
+                insights.append({
+                    "icon": "📒", "type": "khata",
+                    "text": f"Khata Alert: {len(overdue)} customers owe ₹{total_due:,.0f}. Biggest: {top_debtor['name']} (₹{top_debtor['balance']:,.0f})"
+                })
+        except:
+            pass
+
         if not insights:
             insights.append({"icon": "✅", "text": "All systems healthy! No alerts right now.", "type": "info"})
 
