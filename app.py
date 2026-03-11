@@ -424,6 +424,121 @@ def train_model():
             "error": f"Error training model: {str(e)}"
         }), 500
 
+@app.route('/api/smart-insights')
+def smart_insights():
+    """ML-powered insights: ABC Analysis, Expiry Alerts, Anomaly Detection"""
+    try:
+        df = db.get_all_items()
+        insights = []
+
+        if df is None or df.empty:
+            return jsonify({"insights": [{"icon": "📦", "text": "Add products to get AI-powered insights!", "type": "info"}]})
+
+        df_clean = df.drop(columns=['created_at'], errors='ignore')
+
+        # ── 1. ABC ANALYSIS (Revenue Pareto) ──
+        try:
+            df_sorted = df_clean.sort_values('total_revenue', ascending=False)
+            total_rev = df_sorted['total_revenue'].astype(float).sum()
+            if total_rev > 0:
+                df_sorted['cum_pct'] = df_sorted['total_revenue'].astype(float).cumsum() / total_rev * 100
+                a_items = df_sorted[df_sorted['cum_pct'] <= 80]
+                b_items = df_sorted[(df_sorted['cum_pct'] > 80) & (df_sorted['cum_pct'] <= 95)]
+                c_items = df_sorted[df_sorted['cum_pct'] > 95]
+                top = df_sorted.iloc[0]
+                insights.append({
+                    "icon": "🏆", "type": "abc",
+                    "text": f"ABC Analysis: {len(a_items)} products generate 80% of your ₹{total_rev:,.0f} revenue. Top earner: {top['product_name']} (₹{float(top['total_revenue']):,.0f})"
+                })
+                if len(c_items) > 0:
+                    c_names = ', '.join(c_items['product_name'].head(3).tolist())
+                    insights.append({
+                        "icon": "📉", "type": "abc",
+                        "text": f"Low Performers (C-grade): {c_names} — consider reducing stock or replacing with better-selling items"
+                    })
+        except Exception as e:
+            print(f"ABC error: {e}")
+
+        # ── 2. SMART EXPIRY ALERTS ──
+        try:
+            from datetime import datetime, timedelta
+            today = datetime.now()
+            for _, row in df_clean.iterrows():
+                try:
+                    exp_str = str(row.get('expiry_date', ''))
+                    exp_date = None
+                    for fmt in ['%d/%m/%y', '%d/%m/%Y', '%Y-%m-%d']:
+                        try:
+                            exp_date = datetime.strptime(exp_str, fmt)
+                            break
+                        except:
+                            continue
+                    if exp_date:
+                        days_left = (exp_date - today).days
+                        stock = int(row.get('quantity_stock', 0))
+                        rev = float(row.get('total_revenue', 0))
+                        if 0 < days_left <= 7 and stock > 0:
+                            discount = min(50, max(20, 60 - days_left * 8))
+                            potential_loss = rev * 0.3
+                            insights.append({
+                                "icon": "⏰", "type": "expiry",
+                                "text": f"Sell {row['product_name']} at {discount}% discount ({days_left}d left). Save ~₹{potential_loss:,.0f} vs throwing away"
+                            })
+                        elif days_left <= 0 and stock > 0:
+                            insights.append({
+                                "icon": "🚨", "type": "expiry",
+                                "text": f"{row['product_name']} has EXPIRED with {stock} units still in stock! Remove immediately"
+                            })
+                except:
+                    continue
+        except Exception as e:
+            print(f"Expiry alert error: {e}")
+
+        # ── 3. ANOMALY DETECTION (IQR method) ──
+        try:
+            df_clean['stock_f'] = df_clean['quantity_stock'].astype(float)
+            df_clean['rev_f'] = df_clean['total_revenue'].astype(float)
+            if len(df_clean) >= 4:
+                # Stock anomalies
+                q1 = df_clean['stock_f'].quantile(0.25)
+                q3 = df_clean['stock_f'].quantile(0.75)
+                iqr = q3 - q1
+                if iqr > 0:
+                    outliers = df_clean[(df_clean['stock_f'] < q1 - 1.5*iqr) | (df_clean['stock_f'] > q3 + 1.5*iqr)]
+                    for _, row in outliers.iterrows():
+                        stock = int(row['stock_f'])
+                        if stock > q3 + 1.5*iqr:
+                            insights.append({
+                                "icon": "📊", "type": "anomaly",
+                                "text": f"Anomaly: {row['product_name']} has unusually HIGH stock ({stock} units) — possible overstocking"
+                            })
+                        else:
+                            insights.append({
+                                "icon": "📊", "type": "anomaly",
+                                "text": f"Anomaly: {row['product_name']} has unusually LOW stock ({stock} units) — restock urgently"
+                            })
+        except Exception as e:
+            print(f"Anomaly detection error: {e}")
+
+        # Low stock general alert
+        try:
+            low = df_clean[df_clean['quantity_stock'].astype(float) <= df_clean['minimum_stock_level'].astype(float)]
+            if len(low) > 0:
+                names = ', '.join(low['product_name'].head(4).tolist())
+                insights.append({
+                    "icon": "⚠️", "type": "lowstock",
+                    "text": f"{len(low)} items below minimum stock: {names}"
+                })
+        except:
+            pass
+
+        if not insights:
+            insights.append({"icon": "✅", "text": "All systems healthy! No alerts right now.", "type": "info"})
+
+        return jsonify({"insights": insights})
+    except Exception as e:
+        return jsonify({"insights": [{"icon": "❌", "text": f"Analysis error: {str(e)}", "type": "error"}]})
+
 @app.route('/api/inventory-summary')
 def inventory_summary():
     """API endpoint for inventory summary"""

@@ -470,6 +470,22 @@
             return res;
         };
 
+        // Load ML-powered Smart Insights
+        (async function loadSmartInsights() {
+            try {
+                const res = await fetch('/api/smart-insights');
+                const data = await res.json();
+                const container = document.getElementById('aiInsightsList');
+                if (container && data.insights) {
+                    container.innerHTML = data.insights.map(i =>
+                        `<div class="insight-chip" style="${i.type==='expiry'?'border-color:rgba(239,68,68,0.3);':i.type==='anomaly'?'border-color:rgba(251,191,36,0.3);':''}">${i.icon} ${i.text}</div>`
+                    ).join('');
+                }
+            } catch(e) {
+                console.log('Smart insights error:', e);
+            }
+        })();
+
         function toggleChat() {
             const p = document.getElementById('chatPanel');
             p.style.display = (p.style.display === 'none' || !p.style.display) ? 'flex' : 'none';
