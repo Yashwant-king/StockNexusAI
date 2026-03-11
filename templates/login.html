@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockNexus AI — Sign In</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+
+        body {
+            min-height:100vh; display:flex; align-items:center; justify-content:center;
+            background:#060818;
+            background-image:
+                radial-gradient(ellipse 80% 50% at 20% -10%, rgba(99,102,241,0.18) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 40% at 85% 110%, rgba(6,182,212,0.12) 0%, transparent 60%),
+                radial-gradient(ellipse 40% 30% at 50% 50%, rgba(139,92,246,0.06) 0%, transparent 70%);
+            font-family:'Inter',-apple-system,sans-serif;
+            overflow:hidden;
+        }
+
+        /* Animated floating orbs */
+        .orb {
+            position:fixed; border-radius:50%; filter:blur(70px); opacity:0.4;
+            animation:float-orb 8s ease-in-out infinite alternate;
+        }
+        .orb-1 { width:350px; height:350px; background:rgba(99,102,241,0.3); top:-80px; left:-80px; animation-delay:0s; }
+        .orb-2 { width:280px; height:280px; background:rgba(139,92,246,0.25); bottom:-60px; right:-60px; animation-delay:2s; }
+        .orb-3 { width:200px; height:200px; background:rgba(6,182,212,0.2); top:50%; left:60%; animation-delay:4s; }
+        @keyframes float-orb {
+            0% { transform:translate(0,0) scale(1); }
+            100% { transform:translate(30px,-20px) scale(1.1); }
+        }
+
+        /* Login Container */
+        .login-wrapper {
+            position:relative; z-index:10; width:100%; max-width:440px; padding:0 24px;
+        }
+
+        /* Brand */
+        .brand {
+            text-align:center; margin-bottom:2.5rem;
+        }
+        .brand-icon {
+            width:64px; height:64px; margin:0 auto 1rem;
+            background:linear-gradient(135deg,#6366f1,#8b5cf6);
+            border-radius:18px; display:flex; align-items:center; justify-content:center;
+            font-size:28px; box-shadow:0 8px 30px rgba(99,102,241,0.4);
+            animation:brand-glow 3s ease-in-out infinite alternate;
+        }
+        @keyframes brand-glow {
+            0% { box-shadow:0 8px 30px rgba(99,102,241,0.4); }
+            100% { box-shadow:0 12px 40px rgba(99,102,241,0.6); }
+        }
+        .brand-name {
+            font-size:1.8rem; font-weight:900; letter-spacing:-1px;
+            background:linear-gradient(135deg,#fff 30%,#a5b4fc 100%);
+            -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+        }
+        .brand-tagline { color:#64748b; font-size:0.85rem; margin-top:4px; }
+
+        /* Card */
+        .login-card {
+            background:rgba(255,255,255,0.03);
+            border:1px solid rgba(255,255,255,0.08);
+            border-radius:24px; padding:2.5rem 2rem;
+            backdrop-filter:blur(20px);
+            box-shadow:0 20px 60px rgba(0,0,0,0.4);
+        }
+
+        /* Tabs */
+        .tabs {
+            display:flex; background:rgba(255,255,255,0.04);
+            border:1px solid rgba(255,255,255,0.06);
+            border-radius:12px; padding:4px; margin-bottom:2rem;
+        }
+        .tab {
+            flex:1; padding:10px; border:none; border-radius:10px;
+            background:transparent; color:#64748b; font-size:0.88rem;
+            font-weight:600; cursor:pointer; font-family:'Inter',sans-serif;
+            transition:all 0.3s;
+        }
+        .tab.active { background:rgba(99,102,241,0.2); color:#a5b4fc; }
+        .tab:hover:not(.active) { color:#94a3b8; }
+
+        /* Form */
+        .form-section { display:block; }
+        .form-section.hidden { display:none; }
+
+        .field { margin-bottom:1.2rem; }
+        .field-label {
+            display:block; font-size:0.78rem; font-weight:600;
+            color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px;
+            margin-bottom:8px;
+        }
+        .field-wrap {
+            position:relative; display:flex; align-items:center;
+        }
+        .field-icon {
+            position:absolute; left:14px; color:#475569; font-size:0.9rem;
+        }
+        .field-input {
+            width:100%; background:rgba(255,255,255,0.04);
+            border:1px solid rgba(255,255,255,0.1);
+            border-radius:12px; padding:12px 14px 12px 42px;
+            color:#e2e8f0; font-size:0.9rem; font-family:'Inter',sans-serif;
+            outline:none; transition:all 0.2s;
+        }
+        .field-input::placeholder { color:#475569; }
+        .field-input:focus {
+            border-color:rgba(99,102,241,0.5);
+            background:rgba(99,102,241,0.05);
+            box-shadow:0 0 0 3px rgba(99,102,241,0.1);
+        }
+        .eye-btn {
+            position:absolute; right:14px; background:none; border:none;
+            color:#475569; cursor:pointer; font-size:0.9rem; padding:4px;
+        }
+        .eye-btn:hover { color:#94a3b8; }
+
+        /* Remember & Forgot */
+        .row-between {
+            display:flex; justify-content:space-between; align-items:center;
+            margin-bottom:1.5rem;
+        }
+        .check-row { display:flex; align-items:center; gap:8px; }
+        .check-row input { accent-color:#6366f1; width:16px; height:16px; cursor:pointer; }
+        .check-row label { color:#94a3b8; font-size:0.82rem; cursor:pointer; }
+        .forgot-link { color:#6366f1; font-size:0.82rem; font-weight:500; text-decoration:none; }
+        .forgot-link:hover { color:#818cf8; text-decoration:underline; }
+
+        /* Buttons */
+        .btn-login {
+            width:100%; padding:13px; border:none; border-radius:12px;
+            background:linear-gradient(135deg,#6366f1,#8b5cf6);
+            color:#fff; font-size:0.95rem; font-weight:700; cursor:pointer;
+            font-family:'Inter',sans-serif; display:flex; align-items:center;
+            justify-content:center; gap:8px;
+            box-shadow:0 4px 20px rgba(99,102,241,0.4);
+            transition:all 0.3s; position:relative; overflow:hidden;
+        }
+        .btn-login:hover { transform:translateY(-2px); box-shadow:0 8px 30px rgba(99,102,241,0.5); }
+        .btn-login:active { transform:translateY(0); }
+        .btn-login .spinner { display:none; width:18px; height:18px; border:2px solid rgba(255,255,255,0.3); border-top-color:#fff; border-radius:50%; animation:spin 0.6s linear infinite; }
+        @keyframes spin { to { transform:rotate(360deg); } }
+
+        /* Divider */
+        .divider {
+            display:flex; align-items:center; gap:12px; margin:1.5rem 0;
+        }
+        .divider-line { flex:1; height:1px; background:rgba(255,255,255,0.08); }
+        .divider-text { color:#475569; font-size:0.78rem; font-weight:500; }
+
+        /* Social Buttons */
+        .social-btns { display:flex; gap:10px; }
+        .social-btn {
+            flex:1; padding:11px; border:1px solid rgba(255,255,255,0.08);
+            border-radius:12px; background:rgba(255,255,255,0.03);
+            color:#94a3b8; font-size:0.85rem; font-weight:500;
+            cursor:pointer; font-family:'Inter',sans-serif;
+            display:flex; align-items:center; justify-content:center; gap:8px;
+            transition:all 0.2s;
+        }
+        .social-btn:hover { background:rgba(255,255,255,0.06); border-color:rgba(255,255,255,0.15); color:#e2e8f0; }
+
+        /* Footer */
+        .login-footer {
+            text-align:center; margin-top:2rem; color:#475569; font-size:0.78rem;
+        }
+        .login-footer a { color:#6366f1; text-decoration:none; }
+
+        /* Success animation */
+        .success-overlay {
+            position:fixed; inset:0; z-index:100;
+            background:rgba(6,8,24,0.95);
+            display:none; align-items:center; justify-content:center;
+            flex-direction:column; gap:16px;
+        }
+        .success-overlay.show { display:flex; animation:fadeIn 0.3s; }
+        @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+        .success-check {
+            width:80px; height:80px; background:rgba(16,185,129,0.15);
+            border:2px solid #10b981; border-radius:50%;
+            display:flex; align-items:center; justify-content:center;
+            font-size:36px; animation:pop 0.4s cubic-bezier(0.3,1.5,0.7,1);
+        }
+        @keyframes pop { 0%{transform:scale(0);} 100%{transform:scale(1);} }
+        .success-text { color:#e2e8f0; font-size:1.2rem; font-weight:700; }
+        .success-sub { color:#64748b; font-size:0.88rem; }
+    </style>
+</head>
+<body>
+
+    <!-- Animated Orbs -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <!-- Login Wrapper -->
+    <div class="login-wrapper">
+
+        <!-- Brand -->
+        <div class="brand">
+            <div class="brand-icon">🏪</div>
+            <div class="brand-name">StockNexus AI</div>
+            <div class="brand-tagline">Smart Kirana Command Center</div>
+        </div>
+
+        <!-- Login Card -->
+        <div class="login-card">
+
+            <!-- Tabs -->
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('signin')">Sign In</button>
+                <button class="tab" onclick="switchTab('signup')">Create Account</button>
+            </div>
+
+            <!-- SIGN IN FORM -->
+            <div id="signinForm" class="form-section">
+                <div class="field">
+                    <label class="field-label">Email Address</label>
+                    <div class="field-wrap">
+                        <i class="fas fa-envelope field-icon"></i>
+                        <input type="email" class="field-input" placeholder="merchant@example.com" id="loginEmail">
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="field-label">Password</label>
+                    <div class="field-wrap">
+                        <i class="fas fa-lock field-icon"></i>
+                        <input type="password" class="field-input" placeholder="••••••••" id="loginPassword">
+                        <button class="eye-btn" onclick="togglePassword('loginPassword', this)"><i class="fas fa-eye"></i></button>
+                    </div>
+                </div>
+                <div class="row-between">
+                    <div class="check-row">
+                        <input type="checkbox" id="remember" checked>
+                        <label for="remember">Remember me</label>
+                    </div>
+                    <a href="#" class="forgot-link">Forgot password?</a>
+                </div>
+                <button class="btn-login" onclick="fakeLogin()">
+                    <span class="btn-text">Sign In to Dashboard</span>
+                    <div class="spinner" id="loginSpinner"></div>
+                </button>
+            </div>
+
+            <!-- SIGN UP FORM -->
+            <div id="signupForm" class="form-section hidden">
+                <div class="field">
+                    <label class="field-label">Shop Name</label>
+                    <div class="field-wrap">
+                        <i class="fas fa-store field-icon"></i>
+                        <input type="text" class="field-input" placeholder="My Kirana Store">
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="field-label">Email Address</label>
+                    <div class="field-wrap">
+                        <i class="fas fa-envelope field-icon"></i>
+                        <input type="email" class="field-input" placeholder="owner@example.com">
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="field-label">Password</label>
+                    <div class="field-wrap">
+                        <i class="fas fa-lock field-icon"></i>
+                        <input type="password" class="field-input" placeholder="Create a strong password" id="signupPassword">
+                        <button class="eye-btn" onclick="togglePassword('signupPassword', this)"><i class="fas fa-eye"></i></button>
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="field-label">Phone Number</label>
+                    <div class="field-wrap">
+                        <i class="fas fa-phone field-icon"></i>
+                        <input type="tel" class="field-input" placeholder="+91 98765 43210">
+                    </div>
+                </div>
+                <button class="btn-login" onclick="fakeSignup()" style="background:linear-gradient(135deg,#10b981,#059669); box-shadow:0 4px 20px rgba(16,185,129,0.4);">
+                    <span class="btn-text">Create Free Account</span>
+                    <div class="spinner" id="signupSpinner"></div>
+                </button>
+            </div>
+
+            <!-- Divider -->
+            <div class="divider">
+                <div class="divider-line"></div>
+                <span class="divider-text">OR CONTINUE WITH</span>
+                <div class="divider-line"></div>
+            </div>
+
+            <!-- Social Login -->
+            <div class="social-btns">
+                <button class="social-btn" onclick="fakeLogin()"><i class="fab fa-google"></i> Google</button>
+                <button class="social-btn" onclick="fakeLogin()"><i class="fab fa-github"></i> GitHub</button>
+                <button class="social-btn" onclick="fakeLogin()"><i class="fab fa-whatsapp"></i> WhatsApp</button>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="login-footer">
+            Secured by Supabase Auth · 256-bit encryption<br>
+            <span style="margin-top:4px; display:inline-block;">Built with ❤️ by <a href="#">StockNexus AI</a></span>
+        </div>
+    </div>
+
+    <!-- Success Overlay -->
+    <div class="success-overlay" id="successOverlay">
+        <div class="success-check">✓</div>
+        <div class="success-text">Welcome Back!</div>
+        <div class="success-sub">Redirecting to your dashboard...</div>
+    </div>
+
+    <script>
+        function switchTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            if (tab === 'signin') {
+                document.querySelectorAll('.tab')[0].classList.add('active');
+                document.getElementById('signinForm').classList.remove('hidden');
+                document.getElementById('signupForm').classList.add('hidden');
+            } else {
+                document.querySelectorAll('.tab')[1].classList.add('active');
+                document.getElementById('signinForm').classList.add('hidden');
+                document.getElementById('signupForm').classList.remove('hidden');
+            }
+        }
+
+        function togglePassword(id, btn) {
+            const input = document.getElementById(id);
+            const icon = btn.querySelector('i');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.replace('fa-eye', 'fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.replace('fa-eye-slash', 'fa-eye');
+            }
+        }
+
+        function fakeLogin() {
+            const btn = document.querySelector('#signinForm .btn-login') || document.querySelector('.btn-login');
+            const spinner = document.getElementById('loginSpinner');
+            const text = btn.querySelector('.btn-text');
+            text.textContent = 'Authenticating...';
+            if(spinner) spinner.style.display = 'block';
+
+            setTimeout(() => {
+                document.getElementById('successOverlay').classList.add('show');
+                setTimeout(() => { window.location.href = '/dashboard'; }, 1500);
+            }, 1200);
+        }
+
+        function fakeSignup() {
+            const btn = document.querySelectorAll('.btn-login')[1];
+            const spinner = document.getElementById('signupSpinner');
+            const text = btn.querySelector('.btn-text');
+            text.textContent = 'Creating account...';
+            if(spinner) spinner.style.display = 'block';
+
+            setTimeout(() => {
+                document.getElementById('successOverlay').classList.add('show');
+                document.querySelector('.success-text').textContent = 'Account Created!';
+                setTimeout(() => { window.location.href = '/dashboard'; }, 1500);
+            }, 1500);
+        }
+
+        // Allow Enter key to submit
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') fakeLogin();
+        });
+    </script>
+</body>
+</html>

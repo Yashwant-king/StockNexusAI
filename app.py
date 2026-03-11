@@ -67,6 +67,10 @@ with __import__('contextlib').suppress(Exception):
     db.init_db()
 
 @app.route('/')
+def login_page():
+    return render_template("login.html")
+
+@app.route('/dashboard')
 def home():
     return render_template("index.html")
 
