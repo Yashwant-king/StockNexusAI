@@ -109,29 +109,36 @@ def add_item():
     """Handle adding a single item directly to the CSV"""
     try:
         data = request.form
-        
-        # Check if file exists, if not create it with headers
         file_path = app.config['DATA_PATH']
-        if not os.path.exists(file_path):
-            df = pd.DataFrame(columns=['product_id', 'product_name', 'quantity_stock', 'minimum_stock_level', 'total_revenue', 'expiry_date'])
-            df.to_csv(file_path, index=False)
-            
-        # Create a new DataFrame for the single item
-        new_item = pd.DataFrame([{
-            'product_id': data.get('itemId'),
-            'product_name': data.get('itemName'),
-            'quantity_stock': int(data.get('itemStock')),
-            'minimum_stock_level': int(data.get('itemMinStock')),
-            'total_revenue': float(data.get('itemRevenue')),
-            'expiry_date': data.get('itemExpiry')
+        columns = ['product_id', 'product_name', 'quantity_stock', 'minimum_stock_level', 'total_revenue', 'expiry_date']
+
+        # Read existing CSV or create empty DataFrame
+        if os.path.exists(file_path):
+            df = pd.read_csv(file_path)
+            # Ensure it has the right columns
+            for col in columns:
+                if col not in df.columns:
+                    df[col] = ''
+        else:
+            df = pd.DataFrame(columns=columns)
+
+        # Build the new row
+        new_row = pd.DataFrame([{
+            'product_id': str(data.get('itemId', '')).strip(),
+            'product_name': str(data.get('itemName', '')).strip(),
+            'quantity_stock': int(data.get('itemStock', 0)),
+            'minimum_stock_level': int(data.get('itemMinStock', 0)),
+            'total_revenue': float(data.get('itemRevenue', 0)),
+            'expiry_date': str(data.get('itemExpiry', '')).strip()
         }])
-        
-        # Append to the existing CSV
-        new_item.to_csv(file_path, mode='a', header=not os.path.exists(file_path), index=False)
-        
+
+        # Concat and rewrite the whole file cleanly (avoids CSV corruption)
+        df = pd.concat([df, new_row], ignore_index=True)
+        df.to_csv(file_path, index=False)
+
         return jsonify({
             "success": True,
-            "message": f"Successfully added {data.get('itemName')} to database!"
+            "message": f"Successfully added {data.get('itemName')} to inventory!"
         }), 200
 
     except Exception as e:
