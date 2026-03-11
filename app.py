@@ -405,8 +405,12 @@ def sales_analytics():
         # Convert DataFrames to dictionaries and ensure JSON serializable
         top_selling_dict = []
         for _, row in top_selling_products.iterrows():
+            try:
+                pid = int(row['product_id'])
+            except (ValueError, TypeError):
+                pid = 0
             top_selling_dict.append({
-                'product_id': int(row['product_id']),
+                'product_id': pid,
                 'product_name': str(row['product_name']),
                 'quantity_stock': int(row['quantity_stock']),
                 'total_revenue': float(row['total_revenue'])
@@ -414,8 +418,12 @@ def sales_analytics():
 
         bottom_selling_dict = []
         for _, row in bottom_selling_products.iterrows():
+            try:
+                pid = int(row['product_id'])
+            except (ValueError, TypeError):
+                pid = 0
             bottom_selling_dict.append({
-                'product_id': int(row['product_id']),
+                'product_id': pid,
                 'product_name': str(row['product_name']),
                 'quantity_stock': int(row['quantity_stock']),
                 'total_revenue': float(row['total_revenue'])
