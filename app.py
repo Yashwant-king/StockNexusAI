@@ -597,6 +597,75 @@ def smart_insights():
         except:
             pass
 
+        # ── 8. AUTO REORDER SUGGESTIONS ──
+        try:
+            for _, row in df_clean.iterrows():
+                stock = float(row.get('quantity_stock', 0))
+                min_level = float(row.get('minimum_stock_level', 0))
+                name = row.get('product_name', '')
+                if min_level > 0 and stock <= min_level * 1.2 and stock > 0:
+                    # Estimate days until stockout (assuming ~10% daily usage of min_level)
+                    daily_usage = max(min_level * 0.1, 1)
+                    days_left = int(stock / daily_usage)
+                    reorder_qty = int(min_level * 2 - stock)
+                    insights.append({
+                        "icon": "🔄", "type": "reorder",
+                        "text": f"Reorder {name}: Only {int(stock)} left (~{days_left} days). Order {reorder_qty} units to be safe"
+                    })
+        except Exception as e:
+            print(f"Reorder insight error: {e}")
+
+        # ── 9. INVENTORY TURNOVER RATE ──
+        try:
+            if len(df_clean) >= 3:
+                df_clean['turnover'] = df_clean['total_revenue'].astype(float) / (df_clean['quantity_stock'].astype(float).replace(0, 1))
+                fast = df_clean[df_clean['turnover'] > df_clean['turnover'].quantile(0.75)]
+                slow = df_clean[df_clean['turnover'] < df_clean['turnover'].quantile(0.25)]
+                if len(fast) > 0:
+                    fast_names = ', '.join(fast['product_name'].head(3).tolist())
+                    insights.append({
+                        "icon": "🚀", "type": "turnover",
+                        "text": f"Fast-Moving Items: {fast_names} — high revenue per unit, always keep in stock!"
+                    })
+                if len(slow) > 0:
+                    slow_names = ', '.join(slow['product_name'].head(3).tolist())
+                    insights.append({
+                        "icon": "🐢", "type": "turnover",
+                        "text": f"Slow-Moving Items: {slow_names} — low turnover, consider discounting or replacing"
+                    })
+        except Exception as e:
+            print(f"Turnover insight error: {e}")
+
+        # ── 10. DEAD STOCK ALERT ──
+        try:
+            total_rev = df_clean['total_revenue'].astype(float).sum()
+            if total_rev > 0 and len(df_clean) >= 3:
+                avg_rev = total_rev / len(df_clean)
+                dead = df_clean[df_clean['total_revenue'].astype(float) < avg_rev * 0.1]
+                if len(dead) > 0:
+                    dead_names = ', '.join(dead['product_name'].head(3).tolist())
+                    dead_stock_val = dead['quantity_stock'].astype(float).sum()
+                    insights.append({
+                        "icon": "💀", "type": "dead",
+                        "text": f"Dead Stock: {dead_names} — almost no revenue but holding {int(dead_stock_val)} units. Free up shelf space!"
+                    })
+        except Exception as e:
+            print(f"Dead stock insight error: {e}")
+
+        # ── 11. DAILY SALES SUMMARY ──
+        try:
+            total_rev = df_clean['total_revenue'].astype(float).sum()
+            total_items = len(df_clean)
+            total_stock = df_clean['quantity_stock'].astype(float).sum()
+            if total_rev > 0:
+                top_product = df_clean.loc[df_clean['total_revenue'].astype(float).idxmax()]
+                insights.append({
+                    "icon": "📊", "type": "summary",
+                    "text": f"Inventory Summary: {total_items} products | {int(total_stock)} total units | ₹{total_rev:,.0f} revenue | Top: {top_product['product_name']}"
+                })
+        except Exception as e:
+            print(f"Summary insight error: {e}")
+
         if not insights:
             insights.append({"icon": "✅", "text": "All systems healthy! No alerts right now.", "type": "info"})
 
