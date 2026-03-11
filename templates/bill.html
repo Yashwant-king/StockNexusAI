@@ -157,11 +157,13 @@
                         <div><i class="fas fa-star" style="color:#fbbf24;"></i> Loyalty Points Earned:</div>
                         <div style="font-size:1.1rem;font-weight:800;">+<span id="earnedPoints">0</span></div>
                     </div>
-                    <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Print Bill / PDF</button>
-                    <button class="btn-wa" onclick="sendWhatsApp()"><i class="fab fa-whatsapp"></i> Send WhatsApp Receipt</button>
+                    
                     <button style="width:100%;padding:12px;border:none;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;font-size:0.9rem;font-weight:700;cursor:pointer;margin-bottom:12px;box-shadow:0 4px 15px rgba(245,158,11,0.3);" onclick="redeemPoints()">
                         <i class="fas fa-gift"></i> Redeem Customer Points
                     </button>
+                    <button class="btn-print" style="background:linear-gradient(135deg,#10b981,#059669);color:white;" onclick="completeCheckout()"><i class="fas fa-check-circle"></i> Complete & Save Bill</button>
+                    <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Print Bill / PDF</button>
+                    <button class="btn-wa" onclick="sendWhatsApp()"><i class="fab fa-whatsapp"></i> Send WhatsApp Receipt</button>
                     <button class="btn-clear" onclick="clearBill()">Clear Bill</button>
                 </div>
             </div>
@@ -173,6 +175,8 @@
         
         // { id: { name, price, qty } }
         let bill = {}; 
+        let currentCustomerPhone = '';
+        let redeemedPoints = 0; 
 
         function addToBill(id, name, price) {
             if (bill[id]) { bill[id].qty += 1; }
@@ -256,7 +260,11 @@
 
             container.innerHTML = html;
             document.getElementById('totalItems').textContent = totalQty;
-            const finalP = Math.round(totalAmt);
+            
+            // Deduct redeemed points from total UI
+            let finalP = Math.round(totalAmt) - redeemedPoints;
+            if(finalP < 0) finalP = 0;
+            
             document.getElementById('totalAmount').textContent = finalP.toLocaleString('en-IN');
             
             // SMART LOYALTY LOGIC: 1 point for every 100 spent
@@ -273,12 +281,58 @@
             });
         }
 
-        function redeemPoints() {
+        async function redeemPoints() {
             const phone = prompt("Enter customer's 10-digit number to check their loyalty points:");
             if(phone && phone.length >= 10) {
-                // Mock CRM Logic: If they type a number, simulate a successful scan
-                const mockPoints = Math.floor(Math.random() * 200) + 50; 
-                alert(`Customer +91 ${phone} found!\n\nNexus Points Available: ${mockPoints}\nValue: ₹${mockPoints}\n\nYou can deduct this from their final bill amount.`);
+                currentCustomerPhone = phone;
+                try {
+                    const res = await fetch('/api/loyalty', {
+                        method: 'POST',
+                        headers:{'Content-Type':'application/json'},
+                        body: JSON.stringify({phone})
+                    });
+                    const data = await res.json();
+                    if(data.success && data.points > 0) {
+                        if(confirm(`Customer: ${data.name || phone}\nPoints Available: ${data.points}\nValue: ₹${data.points}\n\nDo you want to deduct this from the final bill?`)) {
+                            redeemedPoints = data.points;
+                            renderBill();
+                        }
+                    } else {
+                        alert("No points found for this customer.");
+                    }
+                } catch(e) {
+                    alert("Network error.");
+                }
+            }
+        }
+
+        async function completeCheckout() {
+            const itemIds = Object.keys(bill);
+            if (itemIds.length === 0) { alert("Bill is empty!"); return; }
+            
+            if(!currentCustomerPhone) {
+                currentCustomerPhone = prompt("Enter customer phone number to award Loyalty Points (or leave blank to skip):") || '';
+            }
+
+            try {
+                const res = await fetch('/api/checkout', {
+                    method: 'POST',
+                    headers:{'Content-Type':'application/json'},
+                    body: JSON.stringify({
+                        cart: bill,
+                        customer_phone: currentCustomerPhone,
+                        points_redeemed: redeemedPoints
+                    })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    alert(`✅ Super! Checkout Complete.\nStock has been deducted from the database.\nCustomer earned +${data.points_earned} points!\n\nNote: Reload the page to see updated stock.`);
+                    clearBill();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch(e) {
+                alert("Network error during checkout.");
             }
         }
     </script>

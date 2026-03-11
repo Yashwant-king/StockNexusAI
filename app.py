@@ -1224,6 +1224,103 @@ which items are profitable, and give smart business suggestions. Always be pract
             "error": f"AI Assistant error: {str(e)}"
         }), 500
 
+@app.route('/api/checkout', methods=['POST'])
+def POS_checkout():
+    """Real checkout: Deducts stock, adds revenue, updates loyalty points"""
+    try:
+        data = request.get_json()
+        cart = data.get('cart', {})
+        customer_phone = data.get('customer_phone', '').strip()
+        points_to_redeem = int(data.get('points_redeemed', 0))
+
+        if not cart:
+            return jsonify({"success": False, "error": "Cart is empty"}), 400
+
+        total_bill = 0
+        conn = db.get_connection()
+        cur = conn.cursor()
+
+        # Step 1: Deduct Stock and Add to Revenue
+        for product_id, item in cart.items():
+            qty = int(item['qty'])
+            price = float(item['price'])
+            line_total = qty * price
+            total_bill += line_total
+
+            # Update inventory in DB directly
+            cur.execute("""
+                UPDATE inventory 
+                SET quantity_stock = quantity_stock - %s,
+                    total_revenue = total_revenue + %s
+                WHERE id = %s OR product_id = %s;
+            """, (qty, line_total, product_id, product_id))
+
+        # Determine points earned
+        final_bill = total_bill - points_to_redeem
+        points_earned = int(final_bill // 100)
+
+        # Step 2: Handle Loyalty Points if phone is provided
+        if customer_phone:
+            # Check if customer exists
+            cur.execute("SELECT id, loyalty_points FROM khata_customers WHERE phone = %s;", (customer_phone,))
+            row = cur.fetchone()
+            if row:
+                customer_id = row[0]
+                current_points = int(row[1] or 0)
+                
+                # Check if trying to redeem more than they have
+                if points_to_redeem > current_points:
+                    points_to_redeem = current_points
+                
+                new_points = current_points - points_to_redeem + points_earned
+                
+                # Update points
+                cur.execute("UPDATE khata_customers SET loyalty_points = %s WHERE id = %s;", (new_points, customer_id))
+            else:
+                # Create a new mini-profile for them
+                new_points = points_earned
+                cur.execute("INSERT INTO khata_customers (name, phone, loyalty_points) VALUES (%s, %s, %s);", 
+                           ("Customer " + customer_phone[-4:], customer_phone, new_points))
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return jsonify({
+            "success": True, 
+            "message": "Checkout complete! Stock updated.",
+            "points_earned": points_earned,
+            "final_bill": final_bill
+        })
+
+    except Exception as e:
+        print(f"Checkout error: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/loyalty', methods=['POST'])
+def check_loyalty():
+    """Retrieve loyalty points for a phone number"""
+    try:
+        data = request.get_json()
+        phone = data.get('phone', '').strip()
+        if not phone:
+             return jsonify({"success": False, "points": 0})
+             
+        conn = db.get_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT loyalty_points, name FROM khata_customers WHERE phone = %s;", (phone,))
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+
+        if row:
+            return jsonify({"success": True, "points": int(row[0] or 0), "name": str(row[1])})
+        else:
+            return jsonify({"success": False, "points": 0, "message": "Customer not found"})
+            
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
-    
