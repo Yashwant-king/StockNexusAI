@@ -113,13 +113,14 @@ def add_item(product_id, product_name, quantity_stock, minimum_stock_level, tota
             conn.commit()
             cur.close()
             conn.close()
+            print(f"✅ DB: Added {product_name} successfully")
             return True
         except Exception as e:
-            print(f"DB add item error: {e}")
-            return False
+            print(f"❌ DB add item error: {e}. Falling back to CSV...")
 
-    # CSV fallback
+    # CSV fallback (always runs if DB fails or is not configured)
     try:
+        os.makedirs(os.path.dirname(CSV_PATH), exist_ok=True)
         df = pd.read_csv(CSV_PATH) if os.path.exists(CSV_PATH) else pd.DataFrame(columns=COLUMNS)
         new_row = pd.DataFrame([{
             'product_id': product_id, 'product_name': product_name,
@@ -198,8 +199,7 @@ def bulk_upload_from_df(df):
             conn.close()
             return True
         except Exception as e:
-            print(f"DB bulk upload error: {e}")
-            return False
+            print(f"❌ DB bulk upload error: {e}. Falling back to CSV...")
 
     # CSV fallback
     try:
