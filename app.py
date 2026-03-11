@@ -27,6 +27,11 @@ app.config['DATA_PATH'] = 'data_set/data.csv'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs('static', exist_ok=True)
 
+# Initialize Databases
+db.init_db()
+db.init_khata_db()
+db.init_expense_db()
+
 # Load the pickled model
 def load_trained_model():
     """Load the trained model with proper error handling"""
@@ -577,8 +582,15 @@ def sales_analytics():
         except Exception as e:
             print(f"Error creating sales trend plot: {e}")
 
+        # Retrieve Expenses and calculate net profit
+        expenses = db.get_all_expenses()
+        total_expenses = sum([float(e.get('amount', 0)) for e in expenses]) if expenses else 0.0
+        net_profit = total_sales - total_expenses
+
         return render_template('analytics.html', 
                              total_sales=total_sales,
+                             total_expenses=total_expenses,
+                             net_profit=net_profit,
                              average_order_value=average_order_value,
                              top_selling_products=top_selling_dict,
                              bottom_selling_products=bottom_selling_dict)
@@ -999,6 +1011,42 @@ def inventory_summary():
             "last_updated": None,
             "error": str(e)
         }), 200
+
+@app.route('/expenses')
+def expenses_page():
+    """Expenses Tracker and P&L"""
+    try:
+        expenses = db.get_all_expenses()
+        total_expenses = sum([float(e.get('amount', 0)) for e in expenses]) if expenses else 0.0
+        return render_template('expenses.html', expenses=expenses, total_expenses=total_expenses)
+    except Exception as e:
+        print(f"Expenses route error: {e}")
+        return render_template('expenses.html', expenses=[], total_expenses=0)
+
+@app.route('/api/add-expense', methods=['POST'])
+def api_add_expense():
+    try:
+        data = request.get_json()
+        success = db.add_expense(
+            description=data.get('description'),
+            amount=data.get('amount'),
+            date=data.get('date')
+        )
+        if success:
+            return jsonify({'success': True, 'message': 'Expense added'})
+        return jsonify({'success': False, 'error': 'Failed to add expense'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/delete-expense/<int:expense_id>', methods=['DELETE'])
+def api_delete_expense(expense_id):
+    try:
+        success = db.delete_expense(expense_id)
+        if success:
+            return jsonify({'success': True})
+        return jsonify({'success': False, 'error': 'Failed to delete'}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/scan-invoice', methods=['POST'])
 def scan_invoice():

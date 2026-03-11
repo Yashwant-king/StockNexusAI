@@ -1,0 +1,11 @@
+product_id,product_name,quantity_stock,minimum_stock_level,total_revenue,expiry_date
+1001,Organic Avocados,150,50,450.50,15/03/26
+1002,Red Apples,25,40,120.00,20/03/26
+1003,Bananas,200,100,85.00,14/03/26
+1004,Fresh Spinach,15,30,45.00,13/03/26
+1005,Roma Tomatoes,120,40,180.00,18/03/26
+1006,Sweet Potatoes,60,25,95.00,25/03/26
+1007,Strawberries,10,35,150.00,14/03/26
+1008,Carrots,300,50,110.00,30/03/26
+1009,Bell Peppers,25,20,75.00,16/03/26
+1010,Fresh Blueberries,5,15,90.00,13/03/26

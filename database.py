@@ -451,3 +451,115 @@ def delete_customer(customer_id):
     except Exception as e:
         print(f"CSV delete customer error: {e}")
     return deleted
+
+# ═══════════════════════════════════════════════
+# EXPENSES TRACKING SYSTEM
+# ═══════════════════════════════════════════════
+
+EXPENSES_CSV = 'data_set/expenses.csv'
+
+def init_expense_db():
+    """Create expenses table if using database."""
+    if not DATABASE_URL:
+        return
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS expenses (
+                id SERIAL PRIMARY KEY,
+                description VARCHAR(255) NOT NULL,
+                amount DECIMAL(12,2) NOT NULL,
+                date VARCHAR(20),
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        """)
+        conn.commit()
+        cur.close()
+        conn.close()
+        print("✅ Expense table initialized!")
+    except Exception as e:
+        print(f"❌ Expense DB init error: {e}")
+
+def get_all_expenses():
+    """Get all expenses."""
+    if use_db():
+        try:
+            conn = get_connection()
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM expenses ORDER BY id DESC;")
+            rows = cur.fetchall()
+            cur.close()
+            conn.close()
+            return [dict(r) for r in rows]
+        except Exception as e:
+            print(f"❌ DB get expenses error: {e}")
+
+    # CSV fallback
+    try:
+        if not os.path.exists(EXPENSES_CSV):
+            return []
+        df = pd.read_csv(EXPENSES_CSV)
+        return df.sort_values(by='id', ascending=False).to_dict('records')
+    except Exception as e:
+        print(f"CSV get expenses error: {e}")
+    return []
+
+def add_expense(description, amount, date):
+    """Add a new expense."""
+    if use_db():
+        try:
+            conn = get_connection()
+            cur = conn.cursor()
+            cur.execute("INSERT INTO expenses (description, amount, date) VALUES (%s, %s, %s);",
+                        (description, amount, date))
+            conn.commit()
+            cur.close()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"❌ DB add expense error: {e}")
+
+    # CSV fallback
+    try:
+        os.makedirs('data_set', exist_ok=True)
+        if os.path.exists(EXPENSES_CSV):
+            df = pd.read_csv(EXPENSES_CSV)
+            new_id = int(df['id'].max()) + 1 if len(df) > 0 else 1
+        else:
+            df = pd.DataFrame(columns=['id', 'description', 'amount', 'date', 'created_at'])
+            new_id = 1
+        from datetime import datetime
+        new_row = pd.DataFrame([{'id': new_id, 'description': str(description), 'amount': float(amount), 'date': str(date), 'created_at': datetime.now().isoformat()}])
+        df = pd.concat([df, new_row], ignore_index=True)
+        df.to_csv(EXPENSES_CSV, index=False)
+        return True
+    except Exception as e:
+        print(f"CSV add expense error: {e}")
+        return False
+
+def delete_expense(expense_id):
+    """Delete an expense."""
+    deleted = False
+    if use_db():
+        try:
+            conn = get_connection()
+            cur = conn.cursor()
+            cur.execute("DELETE FROM expenses WHERE id = %s;", (expense_id,))
+            deleted = cur.rowcount > 0
+            conn.commit()
+            cur.close()
+            conn.close()
+        except Exception as e:
+            print(f"❌ DB delete expense error: {e}")
+
+    # CSV fallback
+    try:
+        if os.path.exists(EXPENSES_CSV):
+            df = pd.read_csv(EXPENSES_CSV)
+            df = df[df['id'] != int(expense_id)]
+            df.to_csv(EXPENSES_CSV, index=False)
+            deleted = True
+    except Exception as e:
+        print(f"CSV delete expense error: {e}")
+    return deleted

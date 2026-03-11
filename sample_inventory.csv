@@ -1,0 +1,11 @@
+product_id,product_name,quantity_stock,minimum_stock_level,total_revenue,expiry_date
+101,Nexus Pro Laptop,150,50,250000.00,15/12/26
+102,Wireless Mouse V2,25,30,1250.00,20/11/26
+103,USB-C Hub,200,100,5800.00,10/01/27
+104,4K Monitor 27",15,20,9000.00,25/12/26
+105,Mechanical Keyboard,120,40,13600.00,30/11/26
+106,Webcam 1080p,60,25,4800.00,05/12/26
+107,Wireless Earbuds,10,35,2700.00,15/04/26
+108,Graphics Tablet,30,15,12000.00,20/12/26
+109,Laser Printer,25,10,8000.00,25/03/26
+110,Smart Watch Series X,5,20,4500.00,15/03/26

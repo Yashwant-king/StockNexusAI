@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Expenses (P&L) — StockNexus AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{background:#060818;color:#e2e8f0;font-family:'Inter',sans-serif;min-height:100vh;
+            background-image:radial-gradient(ellipse 80% 50% at 20% -10%,rgba(99,102,241,0.15) 0%,transparent 60%),
+            radial-gradient(ellipse 60% 40% at 80% 110%,rgba(239,68,68,0.12) 0%,transparent 60%);background-attachment:fixed;}
+
+        .navbar{background:rgba(6,8,24,0.8);backdrop-filter:blur(20px);border-bottom:1px solid rgba(99,102,241,0.2);position:sticky;top:0;z-index:1000;}
+        .navbar-container{max-width:1400px;margin:0 auto;padding:0 2rem;height:68px;display:flex;justify-content:space-between;align-items:center;}
+        .navbar-brand{font-size:1.4rem;font-weight:800;color:#fff;text-decoration:none;display:flex;align-items:center;gap:0.6rem;}
+        .brand-icon{width:34px;height:34px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+        .nav-pill{display:flex;gap:4px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:4px;}
+        .nav-pill a{color:#94a3b8;text-decoration:none;font-size:0.82rem;font-weight:500;padding:6px 14px;border-radius:8px;transition:all 0.2s;}
+        .nav-pill a:hover,.nav-pill a.active{background:rgba(99,102,241,0.2);color:#a5b4fc;}
+        
+        .page{max-width:1000px;margin:0 auto;padding:2rem;}
+        .page-header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:2rem;}
+        .page-title{font-size:2rem;font-weight:900;color:#fff;letter-spacing:-1px;margin-bottom:4px;}
+        .page-sub{color:#64748b;font-size:0.9rem;}
+
+        .stat-card{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);border-radius:18px;padding:1.5rem 2rem;display:flex;align-items:center;gap:1.5rem;margin-bottom:2rem;}
+        .stat-icon{font-size:2.5rem;color:#fca5a5;background:rgba(239,68,68,0.15);width:70px;height:70px;display:flex;align-items:center;justify-content:center;border-radius:16px;}
+        .stat-value{font-size:2.5rem;font-weight:900;color:#fff;}
+        .stat-label{color:#ef4444;font-size:0.85rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}
+
+        .grid{display:grid;grid-template-columns:350px 1fr;gap:2rem;}
+        @media(max-width:900px){.grid{grid-template-columns:1fr;}}
+
+        .g-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:1.5rem;}
+        .g-title{font-size:1.1rem;font-weight:700;margin-bottom:1.5rem;display:flex;align-items:center;gap:10px;}
+        
+        .form-group{margin-bottom:1.2rem;}
+        .form-label{display:block;font-size:0.8rem;color:#94a3b8;margin-bottom:6px;font-weight:500;}
+        .form-input{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 14px;color:#fff;font-size:0.9rem;font-family:inherit;}
+        .form-input:focus{outline:none;border-color:#6366f1;background:rgba(255,255,255,0.08);}
+        .btn-submit{width:100%;background:linear-gradient(135deg,#ef4444,#b91c1c);color:white;border:none;border-radius:10px;padding:12px;font-weight:600;font-size:0.9rem;cursor:pointer;transition:all 0.2s;}
+        .btn-submit:hover{transform:translateY(-2px);box-shadow:0 5px 15px rgba(239,68,68,0.3);}
+
+        .expense-list{display:flex;flex-direction:column;gap:10px;}
+        .exp-item{background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:12px;padding:1rem;display:flex;justify-content:space-between;align-items:center;}
+        .exp-item:hover{background:rgba(255,255,255,0.04);border-color:rgba(255,255,255,0.1);}
+        .exp-amount{font-weight:800;color:#fca5a5;font-size:1.1rem;}
+        .exp-desc{font-weight:600;color:#e2e8f0;margin-bottom:4px;}
+        .exp-date{font-size:0.75rem;color:#64748b;}
+        .btn-del{background:transparent;border:none;color:#ef4444;cursor:pointer;padding:8px;border-radius:8px;transition:all 0.2s;}
+        .btn-del:hover{background:rgba(239,68,68,0.1);color:#fca5a5;}
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="/dashboard" class="navbar-brand"><div class="brand-icon">🏪</div> StockNexus AI</a>
+            <div class="nav-pill">
+                <a href="/dashboard">Dashboard</a>
+                <a href="/inventory">Inventory</a>
+                <a href="/khata">Khata</a>
+                <a href="/expenses" class="active">Expenses</a>
+                <a href="/dukaan">Dukaan</a>
+                <a href="/analytics">Analytics</a>
+                <a href="/predict">Predictions</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="page">
+        <div class="page-header">
+            <div>
+                <h1 class="page-title">📉 Daily Expenses</h1>
+                <p class="page-sub">Track shop rent, electricity, salaries, and daily maintenance costs.</p>
+            </div>
+            <div>
+                <a href="/analytics" style="color:#a5b4fc;text-decoration:none;font-size:0.9rem;display:flex;align-items:center;gap:6px;"><i class="fas fa-chart-pie"></i> View Net Profit on Analytics</a>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-money-bill-wave"></i></div>
+            <div>
+                <div class="stat-label">Total Shop Expenses</div>
+                <div class="stat-value">₹{{ "%.0f"|format(total_expenses) }}</div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="g-card">
+                <div class="g-title"><i class="fas fa-plus-circle" style="color:#ef4444;"></i> Add New Expense</div>
+                <form id="expForm">
+                    <div class="form-group">
+                        <label class="form-label">Expense Description</label>
+                        <input type="text" id="desc" class="form-input" placeholder="e.g. Shop Rent / Electricity" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Amount (₹)</label>
+                        <input type="number" id="amt" class="form-input" placeholder="500.00" required step="1" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Date</label>
+                        <input type="date" id="date" class="form-input" required>
+                    </div>
+                    <button type="submit" class="btn-submit">Record Expense</button>
+                    <div id="msg" style="margin-top:10px;font-size:0.85rem;text-align:center;"></div>
+                </form>
+            </div>
+
+            <div class="g-card">
+                <div class="g-title"><i class="fas fa-list"></i> Expense History</div>
+                <div class="expense-list">
+                    {% if expenses %}
+                        {% for e in expenses %}
+                        <div class="exp-item">
+                            <div>
+                                <div class="exp-desc">{{ e.description }}</div>
+                                <div class="exp-date"><i class="far fa-calendar-alt"></i> {{ e.date }}</div>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:15px;">
+                                <div class="exp-amount">₹{{ "%.0f"|format(e.amount|float) }}</div>
+                                <button class="btn-del" onclick="delExp({{ e.id }})" title="Delete"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div style="text-align:center;padding:3rem 0;color:#64748b;font-size:0.9rem;">
+                            <i class="fas fa-receipt" style="font-size:3rem;opacity:0.2;margin-bottom:1rem;display:block;"></i>
+                            No expenses recorded yet. Your P&L is clean!
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('date').valueAsDate = new Date();
+
+        document.getElementById('expForm').addEventListener('submit', async(e)=>{
+            e.preventDefault();
+            const btn = e.target.querySelector('button');
+            const msg = document.getElementById('msg');
+            btn.innerHTML = 'Saving...'; btn.disabled = true;
+            
+            try {
+                const res = await fetch('/api/add-expense', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        description: document.getElementById('desc').value.trim(),
+                        amount: document.getElementById('amt').value,
+                        date: document.getElementById('date').value
+                    })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    window.location.reload();
+                } else {
+                    msg.innerHTML = `<span style="color:#ef4444">${data.error}</span>`;
+                }
+            } catch(error) {
+                msg.innerHTML = `<span style="color:#ef4444">Connection Error</span>`;
+            }
+            btn.innerHTML = 'Record Expense'; btn.disabled = false;
+        });
+
+        async function delExp(id) {
+            if(!confirm("Delete this expense record?")) return;
+            try {
+                const res = await fetch(`/api/delete-expense/${id}`, { method: 'DELETE' });
+                const data = await res.json();
+                if(data.success) window.location.reload();
+                else alert(data.error);
+            } catch(e) {
+                alert("Error deleting record.");
+            }
+        }
+    </script>
+</body>
+</html>
