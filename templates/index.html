@@ -213,6 +213,15 @@
             .features-grid { grid-template-columns:1fr; }
             .hero-title { font-size:2rem; }
         }
+
+        /* Notification Bell */
+        .nav-actions { display:flex; gap:12px; align-items:center; }
+        .nav-bell { position:relative; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1); border-radius:10px; width:36px; height:36px; display:flex; align-items:center; justify-content:center; color:#e2e8f0; cursor:pointer; transition:all 0.2s; }
+        .nav-bell:hover { background:rgba(99,102,241,0.15); border-color:rgba(99,102,241,0.4); }
+        .bell-count { position:absolute; top:-6px; right:-6px; background:#ef4444; color:#fff; font-size:10px; font-weight:800; padding:2px 6px; border-radius:10px; display:none; border:2px solid #060818; }
+        .notif-dropdown { position:absolute; top:50px; right:0; width:320px; background:rgba(15,23,42,0.95); backdrop-filter:blur(10px); border:1px solid rgba(99,102,241,0.2); border-radius:14px; padding:12px; display:none; flex-direction:column; gap:8px; box-shadow:0 10px 40px rgba(0,0,0,0.6); z-index:2000; max-height:400px; overflow-y:auto; }
+        .notif-item { display:flex; gap:12px; padding:10px; border-radius:10px; background:rgba(255,255,255,0.03); font-size:0.82rem; border:1px solid rgba(255,255,255,0.05); }
+        .notif-item:hover { background:rgba(99,102,241,0.1); border-color:rgba(99,102,241,0.2); }
     </style>
 </head>
 <body>
@@ -229,10 +238,23 @@
                 <a href="/inventory">Inventory</a>
                 <a href="/khata">Khata</a>
                 <a href="/dukaan">Dukaan</a>
+                <a href="/bill">Bill</a>
                 <a href="/analytics">Analytics</a>
                 <a href="/predict">Predictions</a>
             </div>
-            <button class="nav-badge" onclick="toggleChat()">🤖 AI Assistant</button>
+            
+            <div class="nav-actions">
+                <div style="position:relative;">
+                    <button class="nav-bell" onclick="toggleNotifs()">
+                        <i class="fas fa-bell"></i>
+                        <span class="bell-count" id="bellCount">0</span>
+                    </button>
+                    <div class="notif-dropdown" id="notifDropdown">
+                        <div style="text-align:center;padding:10px;color:#64748b;font-size:0.8rem;">Loading...</div>
+                    </div>
+                </div>
+                <button class="nav-badge" onclick="toggleChat()">🤖 AI Assistant</button>
+            </div>
         </div>
     </nav>
 
@@ -523,6 +545,43 @@
             }
             msgs.scrollTop = msgs.scrollHeight;
         }
+
+        // Notifications
+        async function loadNotifications() {
+            try {
+                const res = await fetch('/api/notifications');
+                const data = await res.json();
+                const bell = document.getElementById('bellCount');
+                const drop = document.getElementById('notifDropdown');
+                
+                if (data.count > 0) {
+                    bell.textContent = data.count > 9 ? '9+' : data.count;
+                    bell.style.display = 'block';
+                    drop.innerHTML = data.alerts.map(a => `
+                        <div class="notif-item">
+                            <div style="font-size:1.4rem;">${a.icon}</div>
+                            <div>
+                                <div style="color:#e2e8f0;font-weight:600;margin-bottom:2px;">${a.type.toUpperCase()}</div>
+                                <div style="color:#94a3b8;line-height:1.4;">${a.text}</div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    bell.style.display = 'none';
+                    drop.innerHTML = '<div style="text-align:center;padding:1rem;color:#64748b;">No new notifications! 🎉</div>';
+                }
+            } catch(e) {
+                console.error("Failed to load notifications");
+            }
+        }
+
+        function toggleNotifs() {
+            const drop = document.getElementById('notifDropdown');
+            drop.style.display = drop.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        // Call on load
+        loadNotifications();
     </script>
 </body>
 </html>
