@@ -358,8 +358,8 @@ class StockNexusEngine {
                 if (response.success) {
                     this.showNotification(response.message, 'success');
                     form.reset();
-                    // Refresh the dashboard stats instantly 
-                    await this.loadDashboardData();
+                    // Reload the page to show the newly added item in the dashboard table
+                    window.location.reload();
                 } else {
                     this.showNotification(response.error || 'Failed to add item', 'error');
                 }

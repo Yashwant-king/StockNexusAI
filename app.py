@@ -80,7 +80,23 @@ def login_page():
 
 @app.route('/dashboard')
 def home():
-    return render_template("index.html")
+    df = db.get_all_items()
+    all_items = []
+    if df is not None and not df.empty:
+        df = df.drop(columns=['created_at'], errors='ignore')
+        # We can reverse the dataframe or sort by something to show newest first, 
+        # but for now we'll just slice the last 20 added items.
+        for _, row in df.iterrows():
+            all_items.append({
+                'product_id': row.get('product_id', ''),
+                'product_name': row.get('product_name', ''),
+                'quantity_stock': row.get('quantity_stock', 0),
+                'minimum_stock_level': row.get('minimum_stock_level', 0),
+                'total_revenue': row.get('total_revenue', 0),
+                'expiry_date': row.get('expiry_date', ''),
+            })
+        all_items.reverse() # Show most recently added at the top
+    return render_template("index.html", all_items=all_items)
 
 @app.route('/dukaan')
 def dukaan():

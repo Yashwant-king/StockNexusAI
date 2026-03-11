@@ -139,6 +139,19 @@
         .upload-zone:hover { border-color:rgba(99,102,241,0.6); background:rgba(99,102,241,0.06); }
         .upload-zone input { display:none; }
         .upload-icon { font-size:2.5rem; color:#6366f1; margin-bottom:0.75rem; display:block; }
+
+        /* Table Styles for Dashboard */
+        .dash-table-container { margin-top:2rem; max-width:1400px; margin-left:auto; margin-right:auto; padding:0 2rem; }
+        .dash-table-card { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:18px; padding:1.5rem; overflow-x:auto; }
+        .dash-table { width:100%; border-collapse:separate; border-spacing:0; }
+        .dash-table th { background:rgba(99,102,241,0.1); color:#a5b4fc; font-size:0.75rem; font-weight:700; text-transform:uppercase; padding:12px 16px; text-align:left; border-bottom:1px solid rgba(99,102,241,0.2); }
+        .dash-table th:first-child { border-radius:10px 0 0 0; }
+        .dash-table th:last-child { border-radius:0 10px 0 0; }
+        .dash-table td { padding:12px 16px; font-size:0.85rem; color:#cbd5e1; border-bottom:1px solid rgba(255,255,255,0.04); }
+        .dash-table tbody tr:hover { background:rgba(99,102,241,0.06); }
+        .badge-stock { background:rgba(16,185,129,0.15); color:#34d399; padding:4px 10px; border-radius:8px; font-weight:600; font-size:0.75rem; }
+        .btn-delete { background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.25); color:#f87171; border-radius:8px; padding:6px 12px; cursor:pointer; font-size:0.78rem; font-weight:600; transition:all 0.2s; display:inline-flex; align-items:center; gap:6px; }
+        .btn-delete:hover { background:rgba(239,68,68,0.25); border-color:#f87171; color:#fff; }
         .upload-text { color:#94a3b8; font-size:0.88rem; }
         .upload-text strong { color:#e2e8f0; }
 
@@ -403,6 +416,58 @@
             </div>
         </div>
     </div>
+    
+    <!-- RECENT INVENTORY ITEMS -->
+    <div class="dash-table-container">
+        <div class="dash-table-card">
+            <div class="glass-card-title" style="margin-bottom:1rem;">
+                <span style="width:32px;height:32px;background:linear-gradient(135deg,#10b981,#059669);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;">📋</span>
+                Recently Added Inventory
+            </div>
+            {% if all_items %}
+            <table class="dash-table">
+                <thead>
+                    <tr>
+                        <th>Product ID</th>
+                        <th>Name</th>
+                        <th>Stock</th>
+                        <th>Min Level</th>
+                        <th>Revenue (₹)</th>
+                        <th>Expiry</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in all_items[:10] %}
+                    <tr>
+                        <td style="font-weight:700;color:#a5b4fc;">{{ item.product_id }}</td>
+                        <td>{{ item.product_name }}</td>
+                        <td><span class="badge-stock">{{ item.quantity_stock }}</span></td>
+                        <td>{{ item.minimum_stock_level }}</td>
+                        <td>₹{{ "%.2f"|format(item.total_revenue) }}</td>
+                        <td>{{ item.expiry_date }}</td>
+                        <td>
+                            <button class="btn-delete" onclick="deleteItem('{{ item.product_id }}')">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% if all_items|length > 10 %}
+            <div style="text-align:center; padding-top:1.5rem;">
+                <a href="/inventory" style="color:#a5b4fc;text-decoration:none;font-size:0.9rem;font-weight:600;"><i class="fas fa-external-link-alt"></i> View all {{ all_items|length }} items in Inventory Page</a>
+            </div>
+            {% endif %}
+            {% else %}
+            <div style="text-align:center; padding:3rem; color:#64748b; font-size:0.95rem;">
+                <i class="fas fa-box-open" style="font-size:3rem; margin-bottom:1rem; opacity:0.3; display:block;"></i>
+                No items added yet. Add an item above to see it here!
+            </div>
+            {% endif %}
+        </div>
+    </div>
 
     <!-- FEATURES GRID -->
     <div class="features-section">
@@ -594,6 +659,19 @@
 
         // Call on load
         loadNotifications();
+
+        function deleteItem(productId) {
+            if(!confirm("Are you sure you want to permanently delete this item?")) return;
+            fetch('/api/delete_item', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ product_id: productId })
+            }).then(r => r.json()).then(data => {
+                if(data.success) {
+                    window.location.reload();
+                } else alert(data.error);
+            });
+        }
 
         // AI Invoice Scanner
         async function handleInvoiceUpload(event) {
