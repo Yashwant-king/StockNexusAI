@@ -327,20 +327,25 @@ def predict():
 def sales_analytics():
     """Display sales analytics with improved error handling"""
     try:
-        # Check if data file exists
-        if not os.path.exists(app.config['DATA_PATH']):
-            return render_template('error.html', 
-                                 error="Data file not found. Please upload a CSV file first.")
-        
-        # Load data from CSV file
-        data = pd.read_csv(app.config['DATA_PATH'])
-        
+        # Get data from database (or CSV fallback)
+        data = db.get_all_items()
+
+        if data is None or data.empty:
+            return render_template('error.html',
+                                 error="No inventory data found. Please upload a CSV or add items first.")
+
+        data = data.drop(columns=['created_at'], errors='ignore')
+
+        # Convert columns to numeric to prevent dtype errors
+        data['quantity_stock'] = pd.to_numeric(data['quantity_stock'], errors='coerce').fillna(0).astype(int)
+        data['total_revenue'] = pd.to_numeric(data['total_revenue'], errors='coerce').fillna(0).astype(float)
+        data['minimum_stock_level'] = pd.to_numeric(data['minimum_stock_level'], errors='coerce').fillna(0).astype(int)
+
         # Calculate total sales and average order value
         total_sales = float(data["total_revenue"].sum())
         average_order_value = float(data["total_revenue"].mean())
 
-        # Find top 5 selling and bottom 5 selling products based on quantity_stock
-        # Since we don't have quantity_sold, we'll use quantity_stock as a proxy
+        # Find top 5 and bottom 5 products
         top_selling_products = data.nlargest(5, "quantity_stock")
         bottom_selling_products = data.nsmallest(5, "quantity_stock")
 
