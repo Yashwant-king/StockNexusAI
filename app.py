@@ -349,10 +349,11 @@ def train_model():
 def inventory_summary():
     """API endpoint for inventory summary"""
     try:
-        print(f"Checking for data file at: {app.config['DATA_PATH']}")
-        
-        if not os.path.exists(app.config['DATA_PATH']):
-            print("Data file not found, returning default metrics")
+        # Get live data from database (or CSV fallback)
+        df = db.get_all_items()
+        last_updated = db.get_last_updated()
+
+        if df is None or df.empty:
             return jsonify({
                 "metrics": {
                     "total_products": 0,
@@ -363,29 +364,35 @@ def inventory_summary():
                     "total_revenue": 0,
                     "average_order_value": 0
                 },
-                "message": "No data file found. Please upload a CSV file first."
+                "last_updated": None,
+                "message": "No inventory data yet. Add your first product above!"
             }), 200
-        
-        print("Data file found, generating report...")
+
+        # Save to CSV for compatibility with existing report generation
+        df_for_report = df.drop(columns=['created_at'], errors='ignore')
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+        df_for_report.to_csv(app.config['DATA_PATH'], index=False)
+
         report = generate_inventory_report(app.config['DATA_PATH'])
-        
+
         if report:
-            print(f"Report generated successfully: {report}")
+            report['last_updated'] = last_updated
             return jsonify(report)
         else:
-            print("Failed to generate report")
             return jsonify({
                 "metrics": {
-                    "total_products": 0,
+                    "total_products": len(df),
                     "low_stock_count": 0,
                     "average_stock_level": 0,
                     "total_stock_value": 0,
                     "near_expiry_count": 0,
-                    "total_revenue": 0,
+                    "total_revenue": float(df['total_revenue'].sum()) if 'total_revenue' in df.columns else 0,
                     "average_order_value": 0
                 },
-                "error": "Failed to generate report"
+                "last_updated": last_updated,
+                "error": "Failed to generate detailed report"
             }), 200
+
     except Exception as e:
         print(f"Error in inventory summary: {str(e)}")
         return jsonify({
@@ -398,6 +405,7 @@ def inventory_summary():
                 "total_revenue": 0,
                 "average_order_value": 0
             },
+            "last_updated": None,
             "error": str(e)
         }), 200
 

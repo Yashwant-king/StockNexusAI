@@ -41,6 +41,20 @@
                     Streamline your inventory operations with AI-powered insights and predictive analytics
                 </p>
             </div>
+        <!-- Last Updated Banner -->
+        <div id="lastUpdatedBanner" style="text-align:center; margin-bottom:16px; display:none;">
+            <span style="background:rgba(99,102,241,0.15); border:1px solid rgba(99,102,241,0.3); color:#a5b4fc;
+                border-radius:20px; padding:6px 18px; font-size:13px;">
+                🕐 Last Updated: <strong id="lastUpdatedTime">--</strong>
+            </span>
+        </div>
+        <!-- Empty State Banner -->
+        <div id="emptyStateBanner" style="text-align:center; margin-bottom:16px; display:none;">
+            <span style="background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); color:#fbbf24;
+                border-radius:20px; padding:6px 18px; font-size:13px;">
+                📦 No inventory yet — add your first product below!
+            </span>
+        </div>
         </div>
 
         <!-- Nexus AI Insights -->
@@ -296,9 +310,35 @@
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <!--     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     <script>
+        // Patch loadDashboardData to also show last_updated
+        const _origLoad = window.StockApp ? window.StockApp.loadDashboardData.bind(window.StockApp) : null;
+        document.addEventListener('DOMContentLoaded', () => {
+            // Hook into every API call for inventory-summary
+            const origFetch = window.fetch;
+            window.fetch = async function(url, opts) {
+                const res = await origFetch(url, opts);
+                if (typeof url === 'string' && url.includes('inventory-summary')) {
+                    const clone = res.clone();
+                    clone.json().then(data => {
+                        const banner = document.getElementById('lastUpdatedBanner');
+                        const emptyBanner = document.getElementById('emptyStateBanner');
+                        const timeEl = document.getElementById('lastUpdatedTime');
+                        if (data.last_updated) {
+                            timeEl.textContent = data.last_updated;
+                            if (banner) banner.style.display = 'block';
+                            if (emptyBanner) emptyBanner.style.display = 'none';
+                        } else if (data.metrics && data.metrics.total_products === 0) {
+                            if (banner) banner.style.display = 'none';
+                            if (emptyBanner) emptyBanner.style.display = 'block';
+                        }
+                    }).catch(() => {});
+                }
+                return res;
+            };
+        });
+
         function toggleChat() {
             const panel = document.getElementById('chatPanel');
             panel.style.display = panel.style.display === 'none' || panel.style.display === '' ? 'flex' : 'none';
@@ -315,12 +355,9 @@
             if (!message) return;
 
             const messagesDiv = document.getElementById('chatMessages');
-
-            // Show user message
             messagesDiv.innerHTML += `<div style="text-align:right;"><div style="display:inline-block; background:rgba(99,102,241,0.3); border-radius:12px; padding:8px 14px; font-size:13px; color:#e2e8f0; max-width:80%;">${message}</div></div>`;
             input.value = '';
 
-            // Show typing indicator
             const typingId = 'typing-' + Date.now();
             messagesDiv.innerHTML += `<div id="${typingId}" style="background:rgba(255,255,255,0.05); border-radius:12px; padding:10px 14px; font-size:13px; color:#94a3b8;">🤖 Thinking...</div>`;
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
@@ -332,9 +369,7 @@
                     body: JSON.stringify({message})
                 });
                 const data = await response.json();
-
                 document.getElementById(typingId).remove();
-
                 if (data.success) {
                     messagesDiv.innerHTML += `<div style="background:rgba(99,102,241,0.15); border-radius:12px; padding:10px 14px; font-size:13px; color:#e2e8f0; border-left:3px solid #6366f1;">${data.reply.replace(/\n/g,'<br>')}</div>`;
                 } else {
@@ -342,11 +377,15 @@
                 }
             } catch (e) {
                 document.getElementById(typingId).remove();
-                messagesDiv.innerHTML += `<div style="background:rgba(220,38,38,0.15); border-radius:12px; padding:10px 14px; font-size:13px; color:#fca5a5;">❌ Connection error. Please try again.</div>`;
+                messagesDiv.innerHTML += `<div style="background:rgba(220,38,38,0.15); border-radius:12px; padding:10px 14px; font-size:13px; color:#fca5a5;">❌ Connection error.</div>`;
             }
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
         }
     </script>
+</body>
+
+</html>
+
 </body>
 
 </html>

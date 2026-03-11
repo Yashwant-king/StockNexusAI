@@ -57,7 +57,7 @@ def get_all_items():
         try:
             conn = get_connection()
             cur = conn.cursor()
-            cur.execute("SELECT product_id, product_name, quantity_stock, minimum_stock_level, total_revenue, expiry_date FROM inventory ORDER BY id;")
+            cur.execute("SELECT product_id, product_name, quantity_stock, minimum_stock_level, total_revenue, expiry_date, created_at FROM inventory ORDER BY id;")
             rows = cur.fetchall()
             cur.close()
             conn.close()
@@ -70,8 +70,34 @@ def get_all_items():
 
     # CSV fallback
     if os.path.exists(CSV_PATH):
-        return pd.read_csv(CSV_PATH)
+        df = pd.read_csv(CSV_PATH)
+        return df
     return pd.DataFrame(columns=COLUMNS)
+
+
+def get_last_updated():
+    """Get the timestamp of the most recently added inventory item."""
+    if use_db():
+        try:
+            conn = get_connection()
+            cur = conn.cursor()
+            cur.execute("SELECT MAX(created_at) as last_updated FROM inventory;")
+            row = cur.fetchone()
+            cur.close()
+            conn.close()
+            if row and row['last_updated']:
+                return row['last_updated'].strftime('%d %b %Y, %I:%M %p')
+            return None
+        except Exception as e:
+            print(f"DB last_updated error: {e}")
+            return None
+
+    # CSV fallback — use file modification time
+    if os.path.exists(CSV_PATH):
+        import datetime
+        mtime = os.path.getmtime(CSV_PATH)
+        return datetime.datetime.fromtimestamp(mtime).strftime('%d %b %Y, %I:%M %p')
+    return None
 
 
 def add_item(product_id, product_name, quantity_stock, minimum_stock_level, total_revenue, expiry_date):
