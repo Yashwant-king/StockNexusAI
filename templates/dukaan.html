@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏪 Our Kirana Shop — Fresh Groceries Daily</title>
+    <meta name="description" content="Fresh groceries, daily essentials, and the best deals at your trusted neighborhood Kirana shop. Order via WhatsApp!">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{background:#0f0f1a;color:#e2e8f0;font-family:'Inter',sans-serif;min-height:100vh;}
+
+        /* Hero */
+        .hero{background:linear-gradient(135deg,#1a1a3e 0%,#0f0f2a 50%,#1a0a2e 100%);padding:3rem 1.5rem;text-align:center;position:relative;overflow:hidden;}
+        .hero::before{content:'';position:absolute;top:-50%;left:-50%;width:200%;height:200%;background:radial-gradient(circle at 30% 50%,rgba(99,102,241,0.08) 0%,transparent 50%),radial-gradient(circle at 70% 50%,rgba(168,85,247,0.06) 0%,transparent 50%);animation:float 20s ease-in-out infinite;}
+        @keyframes float{0%,100%{transform:translate(0,0)}50%{transform:translate(-2%,2%)}}
+        .hero *{position:relative;z-index:1;}
+        .shop-badge{display:inline-flex;align-items:center;gap:8px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:20px;padding:6px 16px;font-size:0.75rem;color:#a5b4fc;margin-bottom:1rem;font-weight:600;}
+        .shop-name{font-size:2.5rem;font-weight:900;color:#fff;letter-spacing:-1.5px;margin-bottom:0.5rem;}
+        .shop-name span{background:linear-gradient(135deg,#6366f1,#a855f7,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-size:200% 200%;animation:gradient 3s ease infinite;}
+        @keyframes gradient{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+        .shop-tagline{font-size:1rem;color:#94a3b8;margin-bottom:1.5rem;font-weight:400;}
+        .hero-stats{display:flex;justify-content:center;gap:2rem;flex-wrap:wrap;}
+        .hero-stat{text-align:center;}
+        .hero-stat-num{font-size:1.5rem;font-weight:800;color:#fff;}
+        .hero-stat-label{font-size:0.7rem;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;}
+
+        /* Section */
+        .section{max-width:900px;margin:0 auto;padding:2rem 1.5rem;}
+        .section-title{font-size:1.3rem;font-weight:800;color:#fff;margin-bottom:1rem;display:flex;align-items:center;gap:10px;}
+
+        /* Deals */
+        .deals-scroll{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x mandatory;}
+        .deals-scroll::-webkit-scrollbar{height:4px;}
+        .deals-scroll::-webkit-scrollbar-thumb{background:rgba(99,102,241,0.3);border-radius:4px;}
+        .deal-card{min-width:200px;background:linear-gradient(135deg,rgba(239,68,68,0.1),rgba(239,68,68,0.03));border:1px solid rgba(239,68,68,0.2);border-radius:16px;padding:1.2rem;scroll-snap-align:start;flex-shrink:0;position:relative;overflow:hidden;}
+        .deal-badge{position:absolute;top:12px;right:12px;background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff;font-size:0.72rem;font-weight:800;padding:4px 10px;border-radius:8px;}
+        .deal-name{font-size:0.95rem;font-weight:700;color:#e2e8f0;margin-bottom:4px;margin-top:4px;}
+        .deal-timer{font-size:0.72rem;color:#fca5a5;display:flex;align-items:center;gap:4px;margin-bottom:8px;}
+        .deal-price{font-size:0.82rem;color:#94a3b8;}
+        .deal-price del{color:#475569;margin-right:6px;}
+        .deal-price strong{color:#34d399;font-size:1rem;}
+
+        /* Products Grid */
+        .products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;}
+        .product-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:1rem;text-align:center;transition:all 0.2s;}
+        .product-card:hover{border-color:rgba(99,102,241,0.3);transform:translateY(-2px);}
+        .product-emoji{font-size:2rem;margin-bottom:6px;display:block;}
+        .product-name{font-size:0.85rem;font-weight:700;color:#e2e8f0;margin-bottom:4px;}
+        .product-price{font-size:0.82rem;color:#a5b4fc;font-weight:600;}
+        .product-stock{font-size:0.68rem;color:#34d399;margin-top:2px;}
+        .product-stock.low{color:#f87171;}
+
+        /* Contact */
+        .contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+        .contact-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:1.2rem;text-align:center;text-decoration:none;color:#e2e8f0;transition:all 0.2s;}
+        .contact-card:hover{border-color:rgba(99,102,241,0.4);transform:translateY(-2px);}
+        .contact-icon{font-size:1.8rem;margin-bottom:6px;display:block;}
+        .contact-label{font-size:0.82rem;font-weight:600;}
+        .contact-sub{font-size:0.72rem;color:#64748b;margin-top:2px;}
+        .wa-btn{background:linear-gradient(135deg,#25D366,#128C7E);border:none;color:#fff;font-size:1rem;font-weight:700;padding:14px 28px;border-radius:14px;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;max-width:400px;margin:1rem auto;box-shadow:0 4px 20px rgba(37,211,102,0.3);transition:all 0.2s;text-decoration:none;}
+        .wa-btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(37,211,102,0.4);}
+
+        /* Share Bar */
+        .share-bar{background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:16px;padding:1.2rem;text-align:center;margin-top:1rem;}
+        .share-title{font-size:0.85rem;font-weight:700;color:#a5b4fc;margin-bottom:8px;}
+        .share-btns{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;}
+        .share-btn{padding:8px 16px;border-radius:10px;font-size:0.78rem;font-weight:600;cursor:pointer;border:none;font-family:'Inter',sans-serif;transition:all 0.2s;text-decoration:none;display:inline-flex;align-items:center;gap:6px;}
+        .share-wa{background:rgba(37,211,102,0.15);color:#25D366;border:1px solid rgba(37,211,102,0.3);}
+        .share-copy{background:rgba(99,102,241,0.15);color:#a5b4fc;border:1px solid rgba(99,102,241,0.3);}
+        .share-btn:hover{transform:translateY(-1px);}
+
+        /* Footer */
+        .footer{text-align:center;padding:2rem;color:#334155;font-size:0.75rem;}
+        .footer a{color:#6366f1;text-decoration:none;}
+
+        /* No deals */
+        .no-deals{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:2rem;text-align:center;color:#64748b;}
+
+        /* Toast */
+        .toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:3000;padding:10px 20px;border-radius:12px;font-size:0.85rem;font-weight:500;display:none;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);color:#6ee7b7;box-shadow:0 8px 30px rgba(0,0,0,0.4);}
+
+        @media(max-width:600px){.shop-name{font-size:1.8rem;}.contact-grid{grid-template-columns:1fr;}.hero-stats{gap:1.2rem;}}
+    </style>
+</head>
+<body>
+
+    <!-- HERO -->
+    <div class="hero">
+        <div class="shop-badge">✨ Your Trusted Neighborhood Store</div>
+        <h1 class="shop-name">🏪 <span>Kirana Store</span></h1>
+        <p class="shop-tagline">Fresh groceries, daily essentials & best deals — delivered to your doorstep!</p>
+        <div class="hero-stats">
+            <div class="hero-stat">
+                <div class="hero-stat-num">{{ total_products }}+</div>
+                <div class="hero-stat-label">Products</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-num">10+</div>
+                <div class="hero-stat-label">Years Trusted</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-num">500+</div>
+                <div class="hero-stat-label">Happy Families</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-num">⭐ 4.8</div>
+                <div class="hero-stat-label">Rating</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ORDER VIA WHATSAPP -->
+    <div class="section">
+        <a href="https://wa.me/919876543210?text=Hi!%20I%20want%20to%20order%20from%20your%20shop" class="wa-btn" target="_blank">
+            <i class="fab fa-whatsapp" style="font-size:1.3rem;"></i> Order on WhatsApp
+        </a>
+    </div>
+
+    <!-- TODAY'S DEALS -->
+    <div class="section">
+        <div class="section-title">🔥 Today's Deals</div>
+        {% if deals and deals|length > 0 %}
+        <div class="deals-scroll">
+            {% for deal in deals %}
+            <div class="deal-card">
+                <div class="deal-badge">-{{ deal.discount }}%</div>
+                <div style="font-size:1.5rem;">🏷️</div>
+                <div class="deal-name">{{ deal.name }}</div>
+                <div class="deal-timer"><i class="fas fa-clock"></i> {{ deal.days_left }} days left!</div>
+                <div class="deal-price">
+                    <del>₹{{ "%.0f"|format(deal.original) }}</del>
+                    <strong>₹{{ "%.0f"|format(deal.original * (100 - deal.discount) / 100) }}</strong>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="no-deals">
+            <div style="font-size:1.5rem;margin-bottom:8px;">🎉</div>
+            <p>No special deals today — check back tomorrow for fresh offers!</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- PRODUCTS -->
+    <div class="section">
+        <div class="section-title">📦 Our Products</div>
+        {% if products and products|length > 0 %}
+        <div class="products-grid">
+            {% for p in products %}
+            <div class="product-card">
+                <span class="product-emoji">🛒</span>
+                <div class="product-name">{{ p.name }}</div>
+                <div class="product-price">₹{{ "%.0f"|format(p.price) }}</div>
+                <div class="product-stock {{ 'low' if p.stock < 20 else '' }}">
+                    {{ '✅ In Stock' if p.stock > 20 else '⚡ Limited Stock' if p.stock > 0 else '❌ Out of Stock' }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="no-deals">
+            <p>Products coming soon! Contact us on WhatsApp for orders.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- CONTACT -->
+    <div class="section">
+        <div class="section-title">📞 Contact Us</div>
+        <div class="contact-grid">
+            <a href="https://wa.me/919876543210" class="contact-card" target="_blank">
+                <span class="contact-icon">💬</span>
+                <div class="contact-label">WhatsApp</div>
+                <div class="contact-sub">Quick order & queries</div>
+            </a>
+            <a href="tel:+919876543210" class="contact-card">
+                <span class="contact-icon">📞</span>
+                <div class="contact-label">Call Us</div>
+                <div class="contact-sub">+91 98765 43210</div>
+            </a>
+            <a href="#" class="contact-card">
+                <span class="contact-icon">📍</span>
+                <div class="contact-label">Visit Us</div>
+                <div class="contact-sub">Your Local Area, City</div>
+            </a>
+            <a href="#" class="contact-card">
+                <span class="contact-icon">🕐</span>
+                <div class="contact-label">Timings</div>
+                <div class="contact-sub">7 AM — 10 PM Daily</div>
+            </a>
+        </div>
+    </div>
+
+    <!-- SHARE -->
+    <div class="section">
+        <div class="share-bar">
+            <div class="share-title">📢 Share Our Shop With Friends & Family!</div>
+            <div class="share-btns">
+                <a class="share-btn share-wa" href="https://wa.me/?text=🏪%20Check%20out%20this%20amazing%20Kirana%20shop!%20Fresh%20groceries%20%26%20best%20deals%20👇%0Ahttps://stocknexusai-2.onrender.com/dukaan" target="_blank">
+                    <i class="fab fa-whatsapp"></i> Share on WhatsApp
+                </a>
+                <button class="share-btn share-copy" onclick="copyLink()">
+                    <i class="fas fa-copy"></i> Copy Link
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+        <p>Powered by <a href="/dashboard">StockNexus AI</a> — Smart Kirana Management</p>
+        <p style="margin-top:4px;">© 2026 All rights reserved</p>
+    </div>
+
+    <div class="toast" id="toast">✅ Link copied!</div>
+
+    <script>
+        function copyLink() {
+            navigator.clipboard.writeText(window.location.href).then(() => {
+                const t = document.getElementById('toast');
+                t.style.display = 'block';
+                setTimeout(() => t.style.display = 'none', 2000);
+            });
+        }
+    </script>
+</body>
+</html>

@@ -75,6 +75,59 @@ def login_page():
 def home():
     return render_template("index.html")
 
+@app.route('/dukaan')
+def dukaan():
+    """Public-facing Digital Dukaan page for customers"""
+    try:
+        df = db.get_all_items()
+        products = []
+        deals = []
+
+        if df is not None and not df.empty:
+            df = df.drop(columns=['created_at'], errors='ignore')
+            df['quantity_stock'] = pd.to_numeric(df['quantity_stock'], errors='coerce').fillna(0)
+            df['total_revenue'] = pd.to_numeric(df['total_revenue'], errors='coerce').fillna(0)
+
+            # Build product list
+            for _, row in df.iterrows():
+                products.append({
+                    'name': row.get('product_name', ''),
+                    'stock': int(row.get('quantity_stock', 0)),
+                    'price': float(row.get('total_revenue', 0)),
+                })
+
+            # Auto-generate deals from near-expiry items
+            from datetime import datetime
+            today = datetime.now()
+            for _, row in df.iterrows():
+                try:
+                    exp_str = str(row.get('expiry_date', ''))
+                    for fmt in ['%d/%m/%y', '%d/%m/%Y', '%Y-%m-%d']:
+                        try:
+                            exp_date = datetime.strptime(exp_str, fmt)
+                            days_left = (exp_date - today).days
+                            if 0 < days_left <= 10 and int(row.get('quantity_stock', 0)) > 0:
+                                discount = min(50, max(15, 55 - days_left * 5))
+                                deals.append({
+                                    'name': row.get('product_name', ''),
+                                    'discount': discount,
+                                    'days_left': days_left,
+                                    'original': float(row.get('total_revenue', 0)),
+                                })
+                            break
+                        except:
+                            continue
+                except:
+                    continue
+
+        return render_template('dukaan.html',
+                             products=products,
+                             deals=deals,
+                             total_products=len(products))
+    except Exception as e:
+        print(f"Dukaan error: {e}")
+        return render_template('dukaan.html', products=[], deals=[], total_products=0)
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     """Handle file upload with improved error handling"""
