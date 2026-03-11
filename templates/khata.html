@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Khata Book — StockNexus AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{background:#060818;color:#e2e8f0;font-family:'Inter',sans-serif;min-height:100vh;
+            background-image:radial-gradient(ellipse 80% 50% at 20% -10%,rgba(99,102,241,0.15) 0%,transparent 60%),
+            radial-gradient(ellipse 60% 40% at 80% 110%,rgba(6,182,212,0.12) 0%,transparent 60%);background-attachment:fixed;}
+
+        /* Navbar */
+        .navbar{background:rgba(6,8,24,0.8);backdrop-filter:blur(20px);border-bottom:1px solid rgba(99,102,241,0.2);position:sticky;top:0;z-index:1000;}
+        .navbar-container{max-width:1400px;margin:0 auto;padding:0 2rem;height:68px;display:flex;justify-content:space-between;align-items:center;}
+        .navbar-brand{font-size:1.4rem;font-weight:800;color:#fff;text-decoration:none;display:flex;align-items:center;gap:0.6rem;}
+        .brand-icon{width:34px;height:34px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+        .nav-pill{display:flex;gap:4px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:4px;}
+        .nav-pill a{color:#94a3b8;text-decoration:none;font-size:0.82rem;font-weight:500;padding:6px 14px;border-radius:8px;transition:all 0.2s;}
+        .nav-pill a:hover,.nav-pill a.active{background:rgba(99,102,241,0.2);color:#a5b4fc;}
+
+        .page{max-width:1400px;margin:0 auto;padding:2rem;}
+        .page-title{font-size:2rem;font-weight:900;color:#fff;letter-spacing:-1px;margin-bottom:4px;}
+        .page-sub{color:#64748b;font-size:0.9rem;margin-bottom:2rem;}
+
+        /* Stats */
+        .stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2rem;}
+        .s-box{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:1.2rem 1.4rem;}
+        .s-num{font-size:1.8rem;font-weight:800;color:#fff;}
+        .s-label{font-size:0.75rem;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-top:2px;}
+
+        /* Grid */
+        .main-grid{display:grid;grid-template-columns:360px 1fr;gap:1.5rem;align-items:start;}
+
+        /* Glass Card */
+        .g-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:1.5rem;}
+        .g-title{font-size:1rem;font-weight:700;color:#e2e8f0;display:flex;align-items:center;gap:10px;margin-bottom:1.2rem;}
+
+        /* Form */
+        .f-label{display:block;font-size:0.75rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;}
+        .f-input{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 14px;color:#e2e8f0;font-size:0.88rem;font-family:'Inter',sans-serif;outline:none;transition:all 0.2s;}
+        .f-input::placeholder{color:#475569;}
+        .f-input:focus{border-color:rgba(99,102,241,0.5);background:rgba(99,102,241,0.05);box-shadow:0 0 0 3px rgba(99,102,241,0.1);}
+        .f-group{margin-bottom:1rem;}
+        .btn-add{width:100%;padding:11px;border:none;border-radius:10px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:0.88rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;box-shadow:0 4px 16px rgba(99,102,241,0.3);transition:all 0.2s;}
+        .btn-add:hover{transform:translateY(-1px);box-shadow:0 6px 24px rgba(99,102,241,0.4);}
+
+        /* Customer List */
+        .cust-list{display:flex;flex-direction:column;gap:8px;}
+        .cust-card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:14px;padding:1rem 1.2rem;display:flex;justify-content:space-between;align-items:center;transition:all 0.2s;cursor:pointer;}
+        .cust-card:hover{border-color:rgba(99,102,241,0.3);background:rgba(99,102,241,0.05);}
+        .cust-card.selected{border-color:rgba(99,102,241,0.5);background:rgba(99,102,241,0.08);}
+        .cust-info{display:flex;flex-direction:column;gap:2px;}
+        .cust-name{font-weight:700;font-size:0.92rem;color:#e2e8f0;}
+        .cust-phone{font-size:0.78rem;color:#64748b;}
+        .cust-bal{text-align:right;}
+        .cust-bal-amount{font-size:1.1rem;font-weight:800;}
+        .bal-due{color:#f87171;}
+        .bal-clear{color:#34d399;}
+        .cust-bal-label{font-size:0.7rem;color:#64748b;text-transform:uppercase;}
+        .cust-actions{display:flex;gap:6px;margin-top:4px;}
+        .btn-sm{padding:5px 10px;border-radius:8px;font-size:0.72rem;font-weight:600;cursor:pointer;border:none;font-family:'Inter',sans-serif;transition:all 0.2s;}
+        .btn-udhar{background:rgba(239,68,68,0.15);color:#f87171;border:1px solid rgba(239,68,68,0.25);}
+        .btn-udhar:hover{background:rgba(239,68,68,0.25);}
+        .btn-pay{background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.25);}
+        .btn-pay:hover{background:rgba(16,185,129,0.25);}
+        .btn-del{background:rgba(255,255,255,0.04);color:#64748b;border:1px solid rgba(255,255,255,0.08);}
+        .btn-del:hover{color:#f87171;border-color:rgba(239,68,68,0.3);}
+
+        /* Transaction Panel */
+        .txn-panel{display:none;}
+        .txn-panel.show{display:block;}
+        .txn-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;}
+        .txn-list{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto;}
+        .txn-row{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-radius:10px;font-size:0.82rem;}
+        .txn-udhar{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.15);}
+        .txn-payment{background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.15);}
+        .txn-amount{font-weight:700;}
+        .txn-note{color:#94a3b8;font-size:0.75rem;}
+        .txn-date{color:#475569;font-size:0.7rem;}
+
+        /* Modal */
+        .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:2000;display:none;align-items:center;justify-content:center;}
+        .modal-bg.show{display:flex;}
+        .modal{background:#1a1a2e;border:1px solid rgba(99,102,241,0.3);border-radius:20px;padding:2rem;width:380px;}
+        .modal-title{font-size:1.1rem;font-weight:700;color:#e2e8f0;margin-bottom:1.2rem;text-align:center;}
+        .modal-btns{display:flex;gap:10px;margin-top:1rem;}
+        .modal-btn{flex:1;padding:10px;border-radius:10px;font-weight:600;font-size:0.88rem;cursor:pointer;font-family:'Inter',sans-serif;border:none;transition:all 0.2s;}
+        .modal-cancel{background:rgba(255,255,255,0.06);color:#94a3b8;border:1px solid rgba(255,255,255,0.1);}
+        .modal-ok{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;box-shadow:0 4px 16px rgba(99,102,241,0.3);}
+        .modal-ok:hover{transform:translateY(-1px);}
+
+        /* Toast */
+        .toast{position:fixed;top:80px;right:24px;z-index:3000;padding:12px 20px;border-radius:12px;font-size:0.85rem;font-weight:500;display:none;box-shadow:0 8px 30px rgba(0,0,0,0.4);}
+        .toast-ok{background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);color:#6ee7b7;}
+        .toast-err{background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;}
+
+        .empty{text-align:center;padding:2rem;color:#475569;}
+        .empty i{font-size:2rem;display:block;margin-bottom:0.8rem;color:#334155;}
+
+        @media(max-width:900px){.main-grid{grid-template-columns:1fr;}.stats-row{grid-template-columns:1fr;}}
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="/dashboard" class="navbar-brand"><div class="brand-icon">🏪</div> StockNexus AI</a>
+            <div class="nav-pill">
+                <a href="/dashboard">Dashboard</a>
+                <a href="/inventory">Inventory</a>
+                <a href="/khata" class="active">Khata</a>
+                <a href="/analytics">Analytics</a>
+                <a href="/predict">Predictions</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="page">
+        <h1 class="page-title">📒 Digital Khata Book</h1>
+        <p class="page-sub">Track customer credit (udhar), record payments, and see who owes what.</p>
+
+        <!-- Stats -->
+        <div class="stats-row">
+            <div class="s-box">
+                <div class="s-num" id="statCustomers">0</div>
+                <div class="s-label">Total Customers</div>
+            </div>
+            <div class="s-box">
+                <div class="s-num" id="statOutstanding" style="color:#f87171;">₹0</div>
+                <div class="s-label">Total Outstanding</div>
+            </div>
+            <div class="s-box">
+                <div class="s-num" id="statClear" style="color:#34d399;">0</div>
+                <div class="s-label">Fully Paid</div>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <!-- LEFT: Add Customer + Customer List -->
+            <div>
+                <!-- Add Customer -->
+                <div class="g-card" style="margin-bottom:1rem;">
+                    <div class="g-title">👤 Add New Customer</div>
+                    <div class="f-group">
+                        <label class="f-label">Customer Name</label>
+                        <input type="text" id="custName" class="f-input" placeholder="e.g. Sharma Ji">
+                    </div>
+                    <div class="f-group">
+                        <label class="f-label">Phone Number</label>
+                        <input type="tel" id="custPhone" class="f-input" placeholder="+91 98765 43210">
+                    </div>
+                    <button class="btn-add" onclick="addCustomer()"><i class="fas fa-plus"></i> Add Customer</button>
+                </div>
+
+                <!-- Customer List -->
+                <div class="g-card">
+                    <div class="g-title">📋 All Customers</div>
+                    <div id="customerList" class="cust-list">
+                        <div class="empty"><i class="fas fa-users"></i>Loading customers...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT: Transaction Panel -->
+            <div>
+                <div class="g-card" id="txnPanelEmpty">
+                    <div class="empty" style="padding:3rem;">
+                        <i class="fas fa-hand-pointer" style="font-size:2.5rem;"></i>
+                        <p style="margin-top:1rem;color:#94a3b8;font-size:0.95rem;">← Select a customer to view their khata</p>
+                    </div>
+                </div>
+                <div class="g-card txn-panel" id="txnPanel">
+                    <div class="txn-header">
+                        <div>
+                            <div style="font-size:1.1rem;font-weight:800;color:#fff;" id="txnCustName">—</div>
+                            <div style="font-size:0.8rem;color:#64748b;" id="txnCustPhone">—</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:0.7rem;color:#64748b;text-transform:uppercase;">Balance Due</div>
+                            <div style="font-size:1.5rem;font-weight:900;" id="txnBalance">₹0</div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Add -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1rem;">
+                        <button class="btn-sm btn-udhar" style="padding:10px;font-size:0.85rem;" onclick="openTxnModal('udhar')">
+                            <i class="fas fa-minus-circle"></i> + Add Udhar
+                        </button>
+                        <button class="btn-sm btn-pay" style="padding:10px;font-size:0.85rem;" onclick="openTxnModal('payment')">
+                            <i class="fas fa-plus-circle"></i> Record Payment
+                        </button>
+                    </div>
+
+                    <div style="font-size:0.82rem;font-weight:600;color:#94a3b8;margin-bottom:8px;">Transaction History</div>
+                    <div id="txnList" class="txn-list">
+                        <div class="empty"><i class="fas fa-receipt"></i>No transactions yet</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Transaction Modal -->
+    <div class="modal-bg" id="txnModal">
+        <div class="modal">
+            <div class="modal-title" id="txnModalTitle">Add Udhar</div>
+            <div class="f-group">
+                <label class="f-label">Amount (₹)</label>
+                <input type="number" id="txnAmount" class="f-input" placeholder="500" min="1" step="1">
+            </div>
+            <div class="f-group">
+                <label class="f-label">Note (Optional)</label>
+                <input type="text" id="txnNote" class="f-input" placeholder="e.g. Grocery items">
+            </div>
+            <div class="modal-btns">
+                <button class="modal-btn modal-cancel" onclick="closeTxnModal()">Cancel</button>
+                <button class="modal-btn modal-ok" id="txnSubmitBtn" onclick="submitTransaction()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        let selectedCustomerId = null;
+        let selectedTxnType = 'udhar';
+
+        // Load customers on page load
+        loadCustomers();
+
+        async function loadCustomers() {
+            try {
+                const res = await fetch('/api/khata/customers');
+                const data = await res.json();
+                if (!data.success) return;
+
+                // Stats
+                document.getElementById('statCustomers').textContent = data.total_customers;
+                document.getElementById('statOutstanding').textContent = '₹' + data.total_outstanding.toLocaleString('en-IN');
+                const clearCount = data.customers.filter(c => c.balance <= 0).length;
+                document.getElementById('statClear').textContent = clearCount;
+
+                // Customer list
+                const list = document.getElementById('customerList');
+                if (data.customers.length === 0) {
+                    list.innerHTML = '<div class="empty"><i class="fas fa-users"></i>No customers yet. Add your first customer above!</div>';
+                    return;
+                }
+
+                list.innerHTML = data.customers.map(c => `
+                    <div class="cust-card ${selectedCustomerId == c.id ? 'selected' : ''}" onclick="selectCustomer(${c.id}, '${c.name.replace(/'/g,"\\'")}', '${(c.phone||'').replace(/'/g,"\\'")}', ${c.balance})">
+                        <div>
+                            <div class="cust-name">${c.name}</div>
+                            <div class="cust-phone">${c.phone || 'No phone'}</div>
+                            <div class="cust-actions" onclick="event.stopPropagation()">
+                                <button class="btn-sm btn-udhar" onclick="selectAndUdhar(${c.id},'${c.name.replace(/'/g,"\\'")}','${(c.phone||'').replace(/'/g,"\\'")}',${c.balance})">+ Udhar</button>
+                                <button class="btn-sm btn-pay" onclick="selectAndPay(${c.id},'${c.name.replace(/'/g,"\\'")}','${(c.phone||'').replace(/'/g,"\\'")}',${c.balance})">+ Payment</button>
+                                <button class="btn-sm btn-del" onclick="deleteCustomer(${c.id},'${c.name.replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </div>
+                        <div class="cust-bal">
+                            <div class="cust-bal-amount ${c.balance > 0 ? 'bal-due' : 'bal-clear'}">
+                                ${c.balance > 0 ? '₹' + c.balance.toLocaleString('en-IN') : '✅ Clear'}
+                            </div>
+                            <div class="cust-bal-label">${c.balance > 0 ? 'Due' : 'Paid'}</div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch(e) {
+                console.error('Load error', e);
+            }
+        }
+
+        async function addCustomer() {
+            const name = document.getElementById('custName').value.trim();
+            const phone = document.getElementById('custPhone').value.trim();
+            if (!name) return showToast('❌ Enter customer name', 'err');
+            try {
+                const res = await fetch('/api/khata/add-customer', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({name, phone})
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('✅ ' + data.message, 'ok');
+                    document.getElementById('custName').value = '';
+                    document.getElementById('custPhone').value = '';
+                    loadCustomers();
+                } else showToast('❌ ' + data.error, 'err');
+            } catch(e) { showToast('❌ Error', 'err'); }
+        }
+
+        function selectCustomer(id, name, phone, balance) {
+            selectedCustomerId = id;
+            document.getElementById('txnPanelEmpty').style.display = 'none';
+            document.getElementById('txnPanel').classList.add('show');
+            document.getElementById('txnCustName').textContent = name;
+            document.getElementById('txnCustPhone').textContent = phone || 'No phone';
+            document.getElementById('txnBalance').textContent = '₹' + balance.toLocaleString('en-IN');
+            document.getElementById('txnBalance').style.color = balance > 0 ? '#f87171' : '#34d399';
+            loadTransactions(id);
+            // Highlight
+            document.querySelectorAll('.cust-card').forEach(c => c.classList.remove('selected'));
+            event.currentTarget.classList.add('selected');
+        }
+
+        async function loadTransactions(custId) {
+            try {
+                const res = await fetch('/api/khata/transactions/' + custId);
+                const data = await res.json();
+                const list = document.getElementById('txnList');
+                if (!data.transactions || data.transactions.length === 0) {
+                    list.innerHTML = '<div class="empty" style="padding:1rem;"><i class="fas fa-receipt" style="font-size:1.2rem;"></i>No transactions yet</div>';
+                    return;
+                }
+                list.innerHTML = data.transactions.map(t => {
+                    const isUdhar = t.type === 'udhar';
+                    const date = t.created_at ? new Date(t.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'2-digit'}) : '';
+                    return `<div class="txn-row ${isUdhar?'txn-udhar':'txn-payment'}">
+                        <div>
+                            <span class="txn-amount" style="color:${isUdhar?'#f87171':'#34d399'}">${isUdhar?'-':'+'} ₹${parseFloat(t.amount).toLocaleString('en-IN')}</span>
+                            ${t.note ? `<div class="txn-note">${t.note}</div>` : ''}
+                        </div>
+                        <div class="txn-date">${date}</div>
+                    </div>`;
+                }).join('');
+            } catch(e) { console.error(e); }
+        }
+
+        function selectAndUdhar(id, name, phone, bal) { selectCustomer(id,name,phone,bal); openTxnModal('udhar'); }
+        function selectAndPay(id, name, phone, bal) { selectCustomer(id,name,phone,bal); openTxnModal('payment'); }
+
+        function openTxnModal(type) {
+            if (!selectedCustomerId) return showToast('❌ Select a customer first', 'err');
+            selectedTxnType = type;
+            document.getElementById('txnModalTitle').textContent = type === 'udhar' ? '💸 Add Udhar (Credit)' : '💰 Record Payment';
+            document.getElementById('txnSubmitBtn').style.background = type === 'udhar'
+                ? 'linear-gradient(135deg,#dc2626,#ef4444)' : 'linear-gradient(135deg,#059669,#10b981)';
+            document.getElementById('txnAmount').value = '';
+            document.getElementById('txnNote').value = '';
+            document.getElementById('txnModal').classList.add('show');
+        }
+
+        function closeTxnModal() { document.getElementById('txnModal').classList.remove('show'); }
+
+        async function submitTransaction() {
+            const amount = parseFloat(document.getElementById('txnAmount').value);
+            const note = document.getElementById('txnNote').value.trim();
+            if (!amount || amount <= 0) return showToast('❌ Enter valid amount', 'err');
+            try {
+                const res = await fetch('/api/khata/add-transaction', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({customer_id: selectedCustomerId, type: selectedTxnType, amount, note})
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('✅ ' + data.message, 'ok');
+                    closeTxnModal();
+                    loadCustomers();
+                    loadTransactions(selectedCustomerId);
+                } else showToast('❌ ' + data.error, 'err');
+            } catch(e) { showToast('❌ Error', 'err'); }
+        }
+
+        async function deleteCustomer(id, name) {
+            if (!confirm('Delete ' + name + ' and all their transactions?')) return;
+            try {
+                const res = await fetch('/api/khata/delete-customer', {
+                    method: 'POST', headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({customer_id: id})
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast('✅ Deleted', 'ok');
+                    if (selectedCustomerId === id) {
+                        document.getElementById('txnPanel').classList.remove('show');
+                        document.getElementById('txnPanelEmpty').style.display = 'block';
+                        selectedCustomerId = null;
+                    }
+                    loadCustomers();
+                } else showToast('❌ ' + data.error, 'err');
+            } catch(e) { showToast('❌ Error', 'err'); }
+        }
+
+        function showToast(msg, type) {
+            const t = document.getElementById('toast');
+            t.textContent = msg; t.className = 'toast toast-' + type; t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 3000);
+        }
+    </script>
+</body>
+</html>

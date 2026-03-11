@@ -65,6 +65,7 @@ model = load_trained_model()
 # Initialize the database (create tables if needed)
 with __import__('contextlib').suppress(Exception):
     db.init_db()
+    db.init_khata_db()
 
 @app.route('/')
 def login_page():
@@ -538,6 +539,79 @@ def smart_insights():
         return jsonify({"insights": insights})
     except Exception as e:
         return jsonify({"insights": [{"icon": "❌", "text": f"Analysis error: {str(e)}", "type": "error"}]})
+
+# ═══════════════════════════════════════════════
+# KHATA (CREDIT BOOK) ROUTES
+# ═══════════════════════════════════════════════
+
+@app.route('/khata')
+def khata_page():
+    return render_template('khata.html')
+
+@app.route('/api/khata/customers')
+def get_khata_customers():
+    try:
+        customers = db.get_all_customers()
+        total_outstanding = sum(c['balance'] for c in customers if c['balance'] > 0)
+        return jsonify({
+            'success': True,
+            'customers': customers,
+            'total_outstanding': total_outstanding,
+            'total_customers': len(customers)
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/khata/add-customer', methods=['POST'])
+def add_khata_customer():
+    try:
+        data = request.get_json()
+        name = str(data.get('name', '')).strip()
+        phone = str(data.get('phone', '')).strip()
+        if not name:
+            return jsonify({'success': False, 'error': 'Name is required'}), 400
+        new_id = db.add_customer(name, phone)
+        if new_id:
+            return jsonify({'success': True, 'message': f'{name} added!', 'id': new_id})
+        return jsonify({'success': False, 'error': 'Failed to add customer'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/khata/add-transaction', methods=['POST'])
+def add_khata_transaction():
+    try:
+        data = request.get_json()
+        customer_id = data.get('customer_id')
+        txn_type = data.get('type', '')  # 'udhar' or 'payment'
+        amount = float(data.get('amount', 0))
+        note = str(data.get('note', '')).strip()
+        if not customer_id or txn_type not in ['udhar', 'payment'] or amount <= 0:
+            return jsonify({'success': False, 'error': 'Invalid data'}), 400
+        ok = db.add_transaction(customer_id, txn_type, amount, note)
+        if ok:
+            return jsonify({'success': True, 'message': f'₹{amount:.0f} {txn_type} recorded!'})
+        return jsonify({'success': False, 'error': 'Failed'}), 500
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/khata/transactions/<int:customer_id>')
+def get_khata_transactions(customer_id):
+    try:
+        txns = db.get_customer_transactions(customer_id)
+        return jsonify({'success': True, 'transactions': txns})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/khata/delete-customer', methods=['POST'])
+def delete_khata_customer():
+    try:
+        data = request.get_json()
+        customer_id = data.get('customer_id')
+        if db.delete_customer(customer_id):
+            return jsonify({'success': True, 'message': 'Customer deleted'})
+        return jsonify({'success': False, 'error': 'Not found'}), 404
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/inventory-summary')
 def inventory_summary():

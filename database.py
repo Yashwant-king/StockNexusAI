@@ -209,3 +209,222 @@ def bulk_upload_from_df(df):
     except Exception as e:
         print(f"CSV bulk upload error: {e}")
         return False
+
+
+# ═══════════════════════════════════════════════
+# KHATA (CREDIT BOOK) SYSTEM
+# ═══════════════════════════════════════════════
+
+KHATA_CUSTOMERS_CSV = 'data_set/khata_customers.csv'
+KHATA_TRANSACTIONS_CSV = 'data_set/khata_transactions.csv'
+
+
+def init_khata_db():
+    """Create khata tables if using database."""
+    if not DATABASE_URL:
+        return
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS khata_customers (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                phone VARCHAR(20),
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        """)
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS khata_transactions (
+                id SERIAL PRIMARY KEY,
+                customer_id INTEGER NOT NULL,
+                type VARCHAR(10) NOT NULL,
+                amount DECIMAL(12,2) NOT NULL,
+                note VARCHAR(500),
+                created_at TIMESTAMP DEFAULT NOW()
+            );
+        """)
+        conn.commit()
+        cur.close()
+        conn.close()
+        print("✅ Khata tables initialized!")
+    except Exception as e:
+        print(f"❌ Khata DB init error: {e}")
+
+
+def get_all_customers():
+    """Get all customers with their balance."""
+    customers = []
+
+    if use_db():
+        try:
+            conn = get_connection()
+            cur = conn.cursor()
+            cur.execute("""
+                SELECT c.id, c.name, c.phone, c.created_at,
+                    COALESCE(SUM(CASE WHEN t.type='udhar' THEN t.amount ELSE 0 END), 0) as total_udhar,
+                    COALESCE(SUM(CASE WHEN t.type='payment' THEN t.amount ELSE 0 END), 0) as total_paid
+                FROM khata_customers c
+                LEFT JOIN khata_transactions t ON t.customer_id = c.id
+                GROUP BY c.id, c.name, c.phone, c.created_at
+                ORDER BY c.name;
+            """)
+            rows = cur.fetchall()
+            cur.close()
+            conn.close()
+            for r in rows:
+                customers.append({
+                    'id': r['id'], 'name': r['name'], 'phone': r['phone'] or '',
+                    'total_udhar': float(r['total_udhar']),
+                    'total_paid': float(r['total_paid']),
+                    'balance': float(r['total_udhar']) - float(r['total_paid']),
+                    'created_at': r['created_at']
+                })
+            return customers
+        except Exception as e:
+            print(f"❌ DB get customers error: {e}")
+
+    # CSV fallback
+    try:
+        if not os.path.exists(KHATA_CUSTOMERS_CSV):
+            return []
+        cust_df = pd.read_csv(KHATA_CUSTOMERS_CSV)
+        trans_df = pd.read_csv(KHATA_TRANSACTIONS_CSV) if os.path.exists(KHATA_TRANSACTIONS_CSV) else pd.DataFrame(columns=['id','customer_id','type','amount','note','created_at'])
+        for _, c in cust_df.iterrows():
+            ct = trans_df[trans_df['customer_id'] == c['id']]
+            total_udhar = ct[ct['type'] == 'udhar']['amount'].astype(float).sum() if len(ct) > 0 else 0
+            total_paid = ct[ct['type'] == 'payment']['amount'].astype(float).sum() if len(ct) > 0 else 0
+            customers.append({
+                'id': int(c['id']), 'name': c['name'], 'phone': str(c.get('phone', '')),
+                'total_udhar': total_udhar, 'total_paid': total_paid,
+                'balance': total_udhar - total_paid
+            })
+    except Exception as e:
+        print(f"CSV khata read error: {e}")
+    return customers
+
+
+def add_customer(name, phone):
+    """Add a new customer."""
+    if use_db():
+        try:
+            conn = get_connection()
+            cur = conn.cursor()
+            cur.execute("INSERT INTO khata_customers (name, phone) VALUES (%s, %s) RETURNING id;", (name, phone))
+            new_id = cur.fetchone()['id']
+            conn.commit()
+            cur.close()
+            conn.close()
+            return new_id
+        except Exception as e:
+            print(f"❌ DB add customer error: {e}")
+
+    # CSV fallback
+    try:
+        os.makedirs('data_set', exist_ok=True)
+        if os.path.exists(KHATA_CUSTOMERS_CSV):
+            df = pd.read_csv(KHATA_CUSTOMERS_CSV)
+            new_id = int(df['id'].max()) + 1 if len(df) > 0 else 1
+        else:
+            df = pd.DataFrame(columns=['id', 'name', 'phone', 'created_at'])
+            new_id = 1
+        from datetime import datetime
+        new_row = pd.DataFrame([{'id': new_id, 'name': name, 'phone': phone, 'created_at': datetime.now().isoformat()}])
+        df = pd.concat([df, new_row], ignore_index=True)
+        df.to_csv(KHATA_CUSTOMERS_CSV, index=False)
+        return new_id
+    except Exception as e:
+        print(f"CSV add customer error: {e}")
+        return None
+
+
+def add_transaction(customer_id, txn_type, amount, note=''):
+    """Add udhar or payment transaction."""
+    if use_db():
+        try:
+            conn = get_connection()
+            cur = conn.cursor()
+            cur.execute("INSERT INTO khata_transactions (customer_id, type, amount, note) VALUES (%s, %s, %s, %s);",
+                        (customer_id, txn_type, amount, note))
+            conn.commit()
+            cur.close()
+            conn.close()
+            return True
+        except Exception as e:
+            print(f"❌ DB add transaction error: {e}")
+
+    # CSV fallback
+    try:
+        os.makedirs('data_set', exist_ok=True)
+        if os.path.exists(KHATA_TRANSACTIONS_CSV):
+            df = pd.read_csv(KHATA_TRANSACTIONS_CSV)
+            new_id = int(df['id'].max()) + 1 if len(df) > 0 else 1
+        else:
+            df = pd.DataFrame(columns=['id', 'customer_id', 'type', 'amount', 'note', 'created_at'])
+            new_id = 1
+        from datetime import datetime
+        new_row = pd.DataFrame([{'id': new_id, 'customer_id': int(customer_id), 'type': txn_type, 'amount': float(amount), 'note': note, 'created_at': datetime.now().isoformat()}])
+        df = pd.concat([df, new_row], ignore_index=True)
+        df.to_csv(KHATA_TRANSACTIONS_CSV, index=False)
+        return True
+    except Exception as e:
+        print(f"CSV add transaction error: {e}")
+        return False
+
+
+def get_customer_transactions(customer_id):
+    """Get all transactions for a customer."""
+    if use_db():
+        try:
+            conn = get_connection()
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM khata_transactions WHERE customer_id = %s ORDER BY created_at DESC;", (customer_id,))
+            rows = cur.fetchall()
+            cur.close()
+            conn.close()
+            return [dict(r) for r in rows]
+        except Exception as e:
+            print(f"❌ DB get transactions error: {e}")
+
+    # CSV fallback
+    try:
+        if not os.path.exists(KHATA_TRANSACTIONS_CSV):
+            return []
+        df = pd.read_csv(KHATA_TRANSACTIONS_CSV)
+        ct = df[df['customer_id'] == int(customer_id)].sort_values('created_at', ascending=False)
+        return ct.to_dict('records')
+    except Exception as e:
+        print(f"CSV get transactions error: {e}")
+        return []
+
+
+def delete_customer(customer_id):
+    """Delete a customer and their transactions."""
+    deleted = False
+    if use_db():
+        try:
+            conn = get_connection()
+            cur = conn.cursor()
+            cur.execute("DELETE FROM khata_transactions WHERE customer_id = %s;", (customer_id,))
+            cur.execute("DELETE FROM khata_customers WHERE id = %s;", (customer_id,))
+            deleted = cur.rowcount > 0
+            conn.commit()
+            cur.close()
+            conn.close()
+        except Exception as e:
+            print(f"❌ DB delete customer error: {e}")
+
+    # CSV fallback
+    try:
+        if os.path.exists(KHATA_CUSTOMERS_CSV):
+            df = pd.read_csv(KHATA_CUSTOMERS_CSV)
+            df = df[df['id'] != int(customer_id)]
+            df.to_csv(KHATA_CUSTOMERS_CSV, index=False)
+            deleted = True
+        if os.path.exists(KHATA_TRANSACTIONS_CSV):
+            df = pd.read_csv(KHATA_TRANSACTIONS_CSV)
+            df = df[df['customer_id'] != int(customer_id)]
+            df.to_csv(KHATA_TRANSACTIONS_CSV, index=False)
+    except Exception as e:
+        print(f"CSV delete customer error: {e}")
+    return deleted
