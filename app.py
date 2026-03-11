@@ -690,12 +690,12 @@ def smart_insights():
                             potential_loss = rev * 0.3
                             insights.append({
                                 "icon": "⏰", "type": "expiry",
-                                "text": f"Sell {row['product_name']} at {discount}% discount ({days_left}d left). Save ~₹{potential_loss:,.0f} vs throwing away"
+                                "text": f"Sell {row['product_name']} at {discount}% discount ({days_left}d left). FIFO Alert: Move to the very front of the shelf immediately! Save ~₹{potential_loss:,.0f} vs throwing away"
                             })
                         elif days_left <= 0 and stock > 0:
                             insights.append({
                                 "icon": "🚨", "type": "expiry",
-                                "text": f"{row['product_name']} has EXPIRED with {stock} units still in stock! Remove immediately"
+                                "text": f"{row['product_name']} has EXPIRED with {stock} units still in stock! Remove immediately from shelves to avoid customer complaints."
                             })
                 except:
                     continue

@@ -61,8 +61,10 @@
         .b-row{display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.9rem;}
         .b-bold{font-size:1.2rem;font-weight:800;color:#34d399;}
 
-        .btn-print{width:100%;padding:14px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:12px;font-weight:700;font-size:1rem;cursor:pointer;margin-top:1rem;font-family:'Inter',sans-serif;box-shadow:0 4px 15px rgba(99,102,241,0.3);}
+        .btn-print{width:100%;padding:14px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:12px;font-weight:700;font-size:1rem;cursor:pointer;margin-top:1rem;font-family:'Inter',sans-serif;box-shadow:0 4px 15px rgba(99,102,241,0.3);transition:all 0.2s;}
         .btn-print:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(99,102,241,0.4);}
+        .btn-wa{width:100%;padding:14px;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;border:none;border-radius:12px;font-weight:700;font-size:1rem;cursor:pointer;margin-top:10px;font-family:'Inter',sans-serif;box-shadow:0 4px 15px rgba(37,211,102,0.3);transition:all 0.2s;}
+        .btn-wa:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(37,211,102,0.4);}
         .btn-clear{width:100%;padding:10px;background:transparent;color:#ef4444;border:1px solid rgba(239,68,68,0.3);border-radius:10px;font-weight:600;font-size:0.85rem;cursor:pointer;margin-top:10px;font-family:'Inter',sans-serif;}
         
         .empty-bill{text-align:center;color:#64748b;font-size:0.85rem;margin-top:2rem;}
@@ -77,7 +79,7 @@
             .b-shop, .b-item-name { color: #000 !important; }
             .b-item-price, .b-date, .b-qty-ctrl span { color: #333 !important; }
             .b-bold { color: #000 !important; }
-            .btn-print, .btn-clear, .b-item-del, .b-qty-ctrl button, .navbar, .search-box { display: none !important; }
+            .btn-print, .btn-wa, .btn-clear, .b-item-del, .b-qty-ctrl button, .navbar, .search-box { display: none !important; }
             .b-qty-ctrl { background: none; }
         }
     </style>
@@ -151,7 +153,8 @@
                         <span>Total:</span>
                         <span>₹<span id="totalAmount">0</span></span>
                     </div>
-                    <button class="btn-print" onclick="window.print()">🖨️ Print Bill / PDF</button>
+                    <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Print Bill / PDF</button>
+                    <button class="btn-wa" onclick="sendWhatsApp()"><i class="fab fa-whatsapp"></i> Send WhatsApp Receipt</button>
                     <button class="btn-clear" onclick="clearBill()">Clear Bill</button>
                 </div>
             </div>
@@ -183,6 +186,30 @@
             if (confirm("Clear current bill?")) {
                 bill = {};
                 renderBill();
+            }
+        }
+
+        function sendWhatsApp() {
+            const itemIds = Object.keys(bill);
+            if (itemIds.length === 0) { alert("Bill is empty. Add products first."); return; }
+            
+            let text = "🏪 *Kirana Store Bill*\n---------------------\n";
+            let totalAmt = 0;
+            itemIds.forEach(id => {
+                const item = bill[id];
+                const lineTotal = item.price * item.qty;
+                totalAmt += lineTotal;
+                text += `> ${item.name} x${item.qty} = ₹${Math.round(lineTotal)}\n`;
+            });
+            text += "---------------------\n";
+            text += `*Total: ₹${Math.round(totalAmt)}*\n`;
+            text += "\nThank you for shopping with us! 🙏";
+            
+            const phone = prompt("Enter customer's 10-digit WhatsApp number:");
+            if (phone && phone.length >= 10) {
+                // Formatting mobile for WhatsApp URL
+                const formattedPhone = "91" + phone.replace(/[^0-9]/g, "").slice(-10);
+                window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(text)}`, "_blank");
             }
         }
 
