@@ -8,6 +8,7 @@ import warnings
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from utils import generate_inventory_report, get_low_stock_products, get_near_expiry_products
+import database as db
 
 # Suppress TensorFlow warnings
 warnings.filterwarnings('ignore', category=UserWarning)
@@ -61,6 +62,10 @@ def simple_prediction(quantity1, quantity2, quantity3):
 
 model = load_trained_model()
 
+# Initialize the database (create tables if needed)
+with __import__('contextlib').suppress(Exception):
+    db.init_db()
+
 @app.route('/')
 def home():
     return render_template("index.html")
@@ -88,14 +93,22 @@ def upload_file():
                 "error": "Please upload a CSV file"
             }), 400
         
-        # Save the file to the data directory
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], 'data.csv')
-        file.save(file_path)
+        # Save to database (or CSV fallback)
+        import io
+        content = file.read()
+        df_upload = pd.read_csv(io.BytesIO(content))
+        success = db.bulk_upload_from_df(df_upload)
         
-        return jsonify({
-            "success": True,
-            "message": "File uploaded successfully!"
-        }), 200
+        if success:
+            return jsonify({
+                "success": True,
+                "message": f"Successfully uploaded {len(df_upload)} items to inventory!"
+            }), 200
+        else:
+            return jsonify({
+                "success": False,
+                "error": "Failed to save data. Please try again."
+            }), 500
         
     except Exception as e:
         print(f"Upload error: {str(e)}")
@@ -106,40 +119,27 @@ def upload_file():
 
 @app.route('/add_item', methods=['POST'])
 def add_item():
-    """Handle adding a single item directly to the CSV"""
+    """Handle adding a single item directly to the database"""
     try:
         data = request.form
-        file_path = app.config['DATA_PATH']
-        columns = ['product_id', 'product_name', 'quantity_stock', 'minimum_stock_level', 'total_revenue', 'expiry_date']
-
-        # Read existing CSV or create empty DataFrame
-        if os.path.exists(file_path):
-            df = pd.read_csv(file_path)
-            # Ensure it has the right columns
-            for col in columns:
-                if col not in df.columns:
-                    df[col] = ''
+        success = db.add_item(
+            product_id=str(data.get('itemId', '')).strip(),
+            product_name=str(data.get('itemName', '')).strip(),
+            quantity_stock=int(data.get('itemStock', 0)),
+            minimum_stock_level=int(data.get('itemMinStock', 0)),
+            total_revenue=float(data.get('itemRevenue', 0)),
+            expiry_date=str(data.get('itemExpiry', '')).strip()
+        )
+        if success:
+            return jsonify({
+                "success": True,
+                "message": f"Successfully added {data.get('itemName')} to inventory!"
+            }), 200
         else:
-            df = pd.DataFrame(columns=columns)
-
-        # Build the new row
-        new_row = pd.DataFrame([{
-            'product_id': str(data.get('itemId', '')).strip(),
-            'product_name': str(data.get('itemName', '')).strip(),
-            'quantity_stock': int(data.get('itemStock', 0)),
-            'minimum_stock_level': int(data.get('itemMinStock', 0)),
-            'total_revenue': float(data.get('itemRevenue', 0)),
-            'expiry_date': str(data.get('itemExpiry', '')).strip()
-        }])
-
-        # Concat and rewrite the whole file cleanly (avoids CSV corruption)
-        df = pd.concat([df, new_row], ignore_index=True)
-        df.to_csv(file_path, index=False)
-
-        return jsonify({
-            "success": True,
-            "message": f"Successfully added {data.get('itemName')} to inventory!"
-        }), 200
+            return jsonify({
+                "success": False,
+                "error": "Failed to add item to database."
+            }), 500
 
     except Exception as e:
         print(f"Add item error: {str(e)}")
