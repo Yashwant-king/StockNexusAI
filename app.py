@@ -2,6 +2,8 @@ from flask import Flask, request, render_template, jsonify
 import pandas as pd
 import numpy as np
 import pickle
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import os
 import warnings
@@ -568,6 +570,7 @@ def sales_analytics():
             fig.tight_layout()
 
             # Save the plot to a static file
+            os.makedirs('static', exist_ok=True)
             sales_trend_file_path = "static/sales_trend.png"
             fig.savefig(sales_trend_file_path, dpi=300, bbox_inches='tight', facecolor='white')
             plt.close()

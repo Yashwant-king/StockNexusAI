@@ -101,19 +101,32 @@ def get_last_updated():
 
 
 def add_item(product_id, product_name, quantity_stock, minimum_stock_level, total_revenue, expiry_date):
-    """Add a new item to the inventory."""
+    """Add a new item to the inventory or update if it exists."""
     if use_db():
         try:
             conn = get_connection()
             cur = conn.cursor()
-            cur.execute("""
-                INSERT INTO inventory (product_id, product_name, quantity_stock, minimum_stock_level, total_revenue, expiry_date)
-                VALUES (%s, %s, %s, %s, %s, %s);
-            """, (product_id, product_name, quantity_stock, minimum_stock_level, total_revenue, expiry_date))
+            
+            # Check if it already exists
+            cur.execute("SELECT id, quantity_stock FROM inventory WHERE product_id = %s;", (str(product_id),))
+            existing = cur.fetchone()
+            
+            if existing:
+                cur.execute("""
+                    UPDATE inventory 
+                    SET product_name=%s, quantity_stock=%s, minimum_stock_level=%s, total_revenue=%s, expiry_date=%s
+                    WHERE product_id=%s;
+                """, (str(product_name), int(quantity_stock), int(minimum_stock_level), float(total_revenue), str(expiry_date), str(product_id)))
+            else:
+                cur.execute("""
+                    INSERT INTO inventory (product_id, product_name, quantity_stock, minimum_stock_level, total_revenue, expiry_date)
+                    VALUES (%s, %s, %s, %s, %s, %s);
+                """, (str(product_id), str(product_name), int(quantity_stock), int(minimum_stock_level), float(total_revenue), str(expiry_date)))
+                
             conn.commit()
             cur.close()
             conn.close()
-            print(f"✅ DB: Added {product_name} successfully")
+            print(f"✅ DB: Added/Updated {product_name} successfully")
             return True
         except Exception as e:
             print(f"❌ DB add item error: {e}. Falling back to CSV...")
@@ -122,12 +135,22 @@ def add_item(product_id, product_name, quantity_stock, minimum_stock_level, tota
     try:
         os.makedirs(os.path.dirname(CSV_PATH), exist_ok=True)
         df = pd.read_csv(CSV_PATH) if os.path.exists(CSV_PATH) else pd.DataFrame(columns=COLUMNS)
-        new_row = pd.DataFrame([{
-            'product_id': product_id, 'product_name': product_name,
-            'quantity_stock': quantity_stock, 'minimum_stock_level': minimum_stock_level,
-            'total_revenue': total_revenue, 'expiry_date': expiry_date
-        }])
-        df = pd.concat([df, new_row], ignore_index=True)
+        
+        idx = df.index[df['product_id'].astype(str) == str(product_id)]
+        if not idx.empty:
+            df.loc[idx, 'product_name'] = str(product_name)
+            df.loc[idx, 'quantity_stock'] = int(quantity_stock)
+            df.loc[idx, 'minimum_stock_level'] = int(minimum_stock_level)
+            df.loc[idx, 'total_revenue'] = float(total_revenue)
+            df.loc[idx, 'expiry_date'] = str(expiry_date)
+        else:
+            new_row = pd.DataFrame([{
+                'product_id': str(product_id), 'product_name': str(product_name),
+                'quantity_stock': int(quantity_stock), 'minimum_stock_level': int(minimum_stock_level),
+                'total_revenue': float(total_revenue), 'expiry_date': str(expiry_date)
+            }])
+            df = pd.concat([df, new_row], ignore_index=True)
+            
         df.to_csv(CSV_PATH, index=False)
         return True
     except Exception as e:
