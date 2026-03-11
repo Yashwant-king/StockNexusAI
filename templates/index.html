@@ -80,41 +80,91 @@
             </div>
         </div>
 
-        <!-- File Upload Section -->
-        <div class="card mb-6">
-            <div class="card-header">
-                <h2 class="card-title">
-                    <i class="fas fa-upload"></i>
-                    Upload Inventory Data
-                </h2>
-                <p class="card-subtitle">
-                    Upload your CSV file to get started with inventory management and analytics
-                </p>
-            </div>
-
-            <form id="uploadForm" enctype="multipart/form-data" class="mb-4">
-                <div class="form-group">
-                    <label for="fileInput" class="form-label">Select CSV File</label>
-                    <div class="file-upload">
-                        <input type="file" name="file" id="fileInput" accept=".csv" required>
-                        <label for="fileInput" class="file-upload-label">
-                            <div>
-                                <i class="fas fa-cloud-upload-alt fa-3x mb-3" style="color: var(--primary-color);"></i>
-                                <h3>Choose a file or drag it here</h3>
-                                <p>Supports CSV files with inventory data</p>
-                                <small>Click to browse or drag and drop</small>
-                            </div>
-                        </label>
-                    </div>
+        <!-- Data Entry Section -->
+        <div class="grid grid-2 mb-6" style="align-items: start;">
+            <!-- Direct Add Item Form -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-plus-circle text-success"></i>
+                        Add Single Item
+                    </h2>
+                    <p class="card-subtitle">
+                        Directly add a new product to your inventory database
+                    </p>
                 </div>
 
-                <div id="filePreview"></div>
+                <form id="addItemForm" class="mb-4">
+                    <div class="form-group mb-3">
+                        <label for="itemId" class="form-label">Product ID</label>
+                        <input type="text" id="itemId" name="itemId" class="form-control" placeholder="e.g. 101" required>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="itemName" class="form-label">Product Name</label>
+                        <input type="text" id="itemName" name="itemName" class="form-control" placeholder="e.g. Organic Apples" required>
+                    </div>
+                    <div class="grid grid-2 mb-3">
+                        <div class="form-group">
+                            <label for="itemStock" class="form-label">Current Stock</label>
+                            <input type="number" id="itemStock" name="itemStock" class="form-control" required min="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="itemMinStock" class="form-label">Min Level</label>
+                            <input type="number" id="itemMinStock" name="itemMinStock" class="form-control" required min="0">
+                        </div>
+                    </div>
+                    <div class="grid grid-2 mb-3">
+                        <div class="form-group">
+                            <label for="itemRevenue" class="form-label">Total Revenue ($)</label>
+                            <input type="number" id="itemRevenue" name="itemRevenue" class="form-control" required min="0" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label for="itemExpiry" class="form-label">Expiry Date</label>
+                            <input type="text" id="itemExpiry" name="itemExpiry" class="form-control" placeholder="DD/MM/YY" required>
+                        </div>
+                    </div>
 
-                <button type="submit" class="btn btn-primary btn-lg">
-                    <i class="fas fa-upload"></i>
-                    Upload Data
-                </button>
-            </form>
+                    <button type="submit" class="btn btn-success" style="width: 100%; justify-content: center;">
+                        <i class="fas fa-save"></i>
+                        Add to Database
+                    </button>
+                </form>
+            </div>
+
+            <!-- Bulk File Upload Section -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">
+                        <i class="fas fa-upload text-primary"></i>
+                        Bulk Upload (CSV)
+                    </h2>
+                    <p class="card-subtitle">
+                        Upload a spreadsheet to update many items at once
+                    </p>
+                </div>
+
+                <form id="uploadForm" enctype="multipart/form-data" class="mb-4">
+                    <div class="form-group">
+                        <div class="file-upload">
+                            <input type="file" name="file" id="fileInput" accept=".csv" required>
+                            <label for="fileInput" class="file-upload-label" style="padding: 2rem;">
+                                <div>
+                                    <i class="fas fa-file-csv fa-3x mb-3" style="color: var(--primary);"></i>
+                                    <h3>Drag & Drop CSV</h3>
+                                    <small>Click to browse files</small>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="filePreview"></div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">
+                        <i class="fas fa-upload"></i>
+                        Process Batch
+                    </button>
+                </form>
+            </div>
         </div>
 
         <!-- Features Grid -->

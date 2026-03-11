@@ -104,6 +104,43 @@ def upload_file():
             "error": f"Error saving file: {str(e)}"
         }), 500
 
+@app.route('/add_item', methods=['POST'])
+def add_item():
+    """Handle adding a single item directly to the CSV"""
+    try:
+        data = request.form
+        
+        # Check if file exists, if not create it with headers
+        file_path = app.config['DATA_PATH']
+        if not os.path.exists(file_path):
+            df = pd.DataFrame(columns=['product_id', 'product_name', 'quantity_stock', 'minimum_stock_level', 'total_revenue', 'expiry_date'])
+            df.to_csv(file_path, index=False)
+            
+        # Create a new DataFrame for the single item
+        new_item = pd.DataFrame([{
+            'product_id': data.get('itemId'),
+            'product_name': data.get('itemName'),
+            'quantity_stock': int(data.get('itemStock')),
+            'minimum_stock_level': int(data.get('itemMinStock')),
+            'total_revenue': float(data.get('itemRevenue')),
+            'expiry_date': data.get('itemExpiry')
+        }])
+        
+        # Append to the existing CSV
+        new_item.to_csv(file_path, mode='a', header=not os.path.exists(file_path), index=False)
+        
+        return jsonify({
+            "success": True,
+            "message": f"Successfully added {data.get('itemName')} to database!"
+        }), 200
+
+    except Exception as e:
+        print(f"Add item error: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": f"Error adding item: {str(e)}"
+        }), 500
+
 @app.route('/inventory')
 def inventory():
     """Display inventory with restocking and expiry recommendations"""
