@@ -8,6 +8,9 @@ import os
 import pandas as pd
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from dotenv import load_dotenv
+
+load_dotenv() # Force load .env so local tokens work properly
 
 DATABASE_URL = os.environ.get('DATABASE_URL')
 CSV_PATH = 'data_set/data.csv'
