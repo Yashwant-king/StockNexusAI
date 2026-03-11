@@ -128,6 +128,85 @@ def dukaan():
         print(f"Dukaan error: {e}")
         return render_template('dukaan.html', products=[], deals=[], total_products=0)
 
+@app.route('/bill')
+def bill_page():
+    try:
+        df = db.get_all_items()
+        products = []
+        if df is not None and not df.empty:
+            df = df.drop(columns=['created_at'], errors='ignore')
+            for _, r in df.iterrows():
+                products.append({
+                    'id': str(r.get('product_id', '')),
+                    'name': str(r.get('product_name', '')),
+                    'price': float(r.get('total_revenue', 0)), # Using revenue acting as price for now
+                    'stock': int(pd.to_numeric(r.get('quantity_stock', 0), errors='coerce'))
+                })
+        return render_template('bill.html', products=products)
+    except:
+        return render_template('bill.html', products=[])
+
+@app.route('/api/export-csv')
+def export_csv():
+    """Download inventory as CSV file"""
+    try:
+        from flask import send_file
+        import io
+        df = db.get_all_items()
+        if df is not None and not df.empty:
+            df = df.drop(columns=['created_at'], errors='ignore')
+            output = io.StringIO()
+            df.to_csv(output, index=False)
+            output.seek(0)
+            mem = io.BytesIO()
+            mem.write(output.getvalue().encode('utf-8'))
+            mem.seek(0)
+            return send_file(mem, mimetype='text/csv', as_attachment=True,
+                           download_name='stocknexus_inventory.csv')
+        return jsonify({'error': 'No data'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/notifications')
+def get_notifications():
+    """Get alert notifications for navbar bell"""
+    try:
+        alerts = []
+        df = db.get_all_items()
+        if df is not None and not df.empty:
+            df['quantity_stock'] = pd.to_numeric(df['quantity_stock'], errors='coerce').fillna(0)
+            df['minimum_stock_level'] = pd.to_numeric(df['minimum_stock_level'], errors='coerce').fillna(0)
+            # Low stock alerts
+            low = df[df['quantity_stock'] <= df['minimum_stock_level']]
+            for _, r in low.iterrows():
+                alerts.append({'icon': '⚠️', 'text': f"{r['product_name']} is low ({int(r['quantity_stock'])} left)", 'type': 'warning'})
+            # Near expiry
+            from datetime import datetime
+            today = datetime.now()
+            for _, r in df.iterrows():
+                try:
+                    for fmt in ['%d/%m/%y', '%d/%m/%Y', '%Y-%m-%d']:
+                        try:
+                            exp = datetime.strptime(str(r.get('expiry_date', '')), fmt)
+                            days = (exp - today).days
+                            if days <= 5 and days >= 0:
+                                alerts.append({'icon': '⏰', 'text': f"{r['product_name']} expires in {days}d", 'type': 'expiry'})
+                            elif days < 0:
+                                alerts.append({'icon': '🚨', 'text': f"{r['product_name']} EXPIRED!", 'type': 'danger'})
+                            break
+                        except: continue
+                except: continue
+        # Khata alerts
+        try:
+            customers = db.get_all_customers()
+            overdue = [c for c in customers if c.get('balance', 0) > 0]
+            if overdue:
+                alerts.append({'icon': '📒', 'text': f"{len(overdue)} customers have pending payments", 'type': 'khata'})
+        except: pass
+        return jsonify({'count': len(alerts), 'alerts': alerts[:10]})
+    except Exception as e:
+        return jsonify({'count': 0, 'alerts': [], 'error': str(e)})
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     """Handle file upload with improved error handling"""
