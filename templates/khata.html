@@ -118,8 +118,15 @@
     </nav>
 
     <div class="page">
-        <h1 class="page-title">📒 Digital Khata Book</h1>
-        <p class="page-sub">Track customer credit (udhar), record payments, and see who owes what.</p>
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:2rem;">
+            <div>
+                <h1 class="page-title">📒 Digital Khata Book</h1>
+                <p class="page-sub" style="margin-bottom:0;">Track customer credit (udhar), record payments, and see who owes what.</p>
+            </div>
+            <button onclick="openMarketingHub()" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;padding:12px 20px;border-radius:12px;font-weight:700;font-size:0.9rem;cursor:pointer;box-shadow:0 4px 16px rgba(16,185,129,0.3);display:flex;align-items:center;gap:8px;">
+                <i class="fab fa-whatsapp" style="font-size:1.2rem;"></i> Marketing Broadcast
+            </button>
+        </div>
 
         <!-- Stats -->
         <div class="stats-row">
@@ -217,6 +224,34 @@
             <div class="modal-btns">
                 <button class="modal-btn modal-cancel" onclick="closeTxnModal()">Cancel</button>
                 <button class="modal-btn modal-ok" id="txnSubmitBtn" onclick="submitTransaction()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Marketing Broadcast Modal -->
+    <div class="modal-bg" id="marketingModal">
+        <div class="modal" style="width:450px;">
+            <div style="font-size:2.5rem; text-align:center; margin-bottom:10px; color:#25D366;"><i class="fab fa-whatsapp"></i></div>
+            <div class="modal-title" style="margin-bottom:8px;">1-Click Marketing Broadcast</div>
+            <p style="font-size:0.8rem; color:#94a3b8; text-align:center; margin-bottom:1.5rem;">Reach all your Khata customers instantly with special shop offers.</p>
+            
+            <div class="f-group">
+                <label class="f-label">Select Campaign Template</label>
+                <select id="campaignType" class="f-input" onchange="updateCampaignTemplate()" style="cursor:pointer; appearance:auto;">
+                    <option value="weekend">🔥 Weekend Flash Sale (10% Off)</option>
+                    <option value="festival">🎉 Festival Greeting + Offer</option>
+                    <option value="khata_reminder">💳 Respectful Payment Reminder</option>
+                </select>
+            </div>
+            
+            <div class="f-group" style="margin-top:1rem;">
+                <label class="f-label">Broadcast Message</label>
+                <textarea id="campaignMsg" class="f-input" style="height:120px; resize:none; line-height:1.5; font-size:0.8rem;"></textarea>
+            </div>
+            
+            <div class="modal-btns" style="margin-top:1.5rem;">
+                <button class="modal-btn modal-cancel" onclick="document.getElementById('marketingModal').classList.remove('show')">Cancel</button>
+                <button class="modal-btn" style="background:linear-gradient(135deg,#25D366,#128C7E); color:white; border:none;" onclick="sendBroadcast()"><i class="fas fa-paper-plane"></i> Launch Campaign</button>
             </div>
         </div>
     </div>
@@ -388,6 +423,38 @@
             const t = document.getElementById('toast');
             t.textContent = msg; t.className = 'toast toast-' + type; t.style.display = 'block';
             setTimeout(() => t.style.display = 'none', 3000);
+        }
+
+        // Marketing Hub functions
+        const templates = {
+            'weekend': `🔥 *Weekend Flash Sale at Kirana Store!* 🔥\n\nStock up on groceries this weekend and flat 10% OFF on all bulk orders above ₹1,000!\n\nCheck out our online store here:\n👉 https://stocknexusai-2.onrender.com/dukaan\n\nReply to this message to order directly for home delivery!`,
+            'festival': `🎉 *Happy Festivities from our family to yours!* 🎉\n\nThank you for being a loyal customer. Drop by our shop this week for exclusive festival discounts on dry fruits and sweets.\n\nWarm regards,\nKirana Store`,
+            'khata_reminder': `💳 *Friendly Account Update*\n\nHi! Just a quick automated reminder that there is a pending balance on your Khata account.\n\nYou can pay directly to our store UPI or drop by anytime this week. Thank you for your continued trust in us! 🙏`
+        };
+
+        function openMarketingHub() {
+            document.getElementById('marketingModal').classList.add('show');
+            updateCampaignTemplate();
+        }
+
+        function updateCampaignTemplate() {
+            const type = document.getElementById('campaignType').value;
+            document.getElementById('campaignMsg').value = templates[type] || '';
+        }
+
+        function sendBroadcast() {
+            const msg = document.getElementById('campaignMsg').value;
+            if(!msg) return;
+            
+            // To do a real WhatsApp broadcast via URL, you need to copy the text 
+            // and open WhatsApp Web, because WA URLs don't support multi-recipient BCC directly.
+            navigator.clipboard.writeText(msg).then(() => {
+                showToast('✅ Copied! Open WA Broadcast List', 'ok');
+                setTimeout(() => {
+                    window.open('https://web.whatsapp.com/', '_blank');
+                    document.getElementById('marketingModal').classList.remove('show');
+                }, 1000);
+            });
         }
     </script>
 </body>

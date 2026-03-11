@@ -111,11 +111,37 @@
         </div>
     </div>
 
-    <!-- ORDER VIA WHATSAPP -->
-    <div class="section">
-        <a href="https://wa.me/919876543210?text=Hi!%20I%20want%20to%20order%20from%20your%20shop" class="wa-btn" target="_blank">
-            <i class="fab fa-whatsapp" style="font-size:1.3rem;"></i> Order on WhatsApp
-        </a>
+    <!-- ORDER VIA WHATSAPP (Legacy button modified for Cart) -->
+    <div class="section" style="padding-top:1rem; padding-bottom:1rem; text-align:right;">
+        <button onclick="toggleCart()" class="wa-btn" style="max-width:250px; margin:0 0 0 auto; background:linear-gradient(135deg,#6366f1,#8b5cf6);">
+            <i class="fas fa-shopping-cart" style="font-size:1.1rem;"></i> View Cart (<span id="cartCount">0</span>)
+        </button>
+    </div>
+
+    <!-- FLOATING CART PANEL -->
+    <div id="cartOverlay" style="position:fixed;top:0;right:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:9999;display:none;align-items:center;justify-content:flex-end;">
+        <div style="background:#1a1a2e;width:100%;max-width:400px;height:100%;padding:2rem;display:flex;flex-direction:column;border-left:1px solid rgba(99,102,241,0.3);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+                <h2 style="font-size:1.5rem;color:#e2e8f0;">🛒 Your Cart</h2>
+                <button onclick="toggleCart()" style="background:none;border:none;color:#94a3b8;font-size:1.5rem;cursor:pointer;">&times;</button>
+            </div>
+            <div id="cartItems" style="flex:1;overflow-y:auto;margin-bottom:1rem;color:#94a3b8;">
+                Your cart is empty.
+            </div>
+            <div style="border-top:1px solid rgba(255,255,255,0.1);padding-top:1rem;margin-bottom:1rem;">
+                <div style="display:flex;justify-content:space-between;font-size:1.2rem;font-weight:800;color:#fff;">
+                    <span>Total:</span>
+                    <span>₹<span id="cartTotal">0</span></span>
+                </div>
+            </div>
+            <div class="f-group" style="margin-bottom:1rem;">
+                <label style="font-size:0.8rem;color:#94a3b8;margin-bottom:4px;display:block;">Delivery Address / Notes</label>
+                <input type="text" id="custAddress" style="width:100%;padding:10px;border-radius:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:#fff;" placeholder="Flat 101, Building Name...">
+            </div>
+            <button onclick="checkoutWhatsApp()" class="wa-btn" style="margin:0;width:100%;">
+                <i class="fab fa-whatsapp"></i> Send Order to Shop
+            </button>
+        </div>
     </div>
 
     <!-- TODAY'S DEALS -->
@@ -154,9 +180,18 @@
                 <span class="product-emoji">🛒</span>
                 <div class="product-name">{{ p.name }}</div>
                 <div class="product-price">₹{{ "%.0f"|format(p.price) }}</div>
-                <div class="product-stock {{ 'low' if p.stock < 20 else '' }}">
+                <div class="product-stock {{ 'low' if p.stock < 20 else '' }}" style="margin-bottom:10px;">
                     {{ '✅ In Stock' if p.stock > 20 else '⚡ Limited Stock' if p.stock > 0 else '❌ Out of Stock' }}
                 </div>
+                {% if p.stock > 0 %}
+                <button data-name="{{ p.name }}" data-price="{{ p.price }}" onclick="addToCart(this.getAttribute('data-name'), parseFloat(this.getAttribute('data-price')))" style="background:rgba(99,102,241,0.2);color:#a5b4fc;border:1px solid rgba(99,102,241,0.4);width:100%;padding:6px;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.8rem;transition:all 0.2s;">
+                    + Add to Cart
+                </button>
+                {% else %}
+                <button disabled style="background:rgba(255,255,255,0.05);color:#64748b;border:1px solid rgba(255,255,255,0.1);width:100%;padding:6px;border-radius:8px;font-weight:600;font-size:0.8rem;">
+                    Unavailable
+                </button>
+                {% endif %}
             </div>
             {% endfor %}
         </div>
@@ -218,9 +253,97 @@
     <div class="toast" id="toast">✅ Link copied!</div>
 
     <script>
+        // Shopping Cart Logic
+        let cart = {}; // { "Item Name": { price, qty } }
+
+        function addToCart(name, price) {
+            if (cart[name]) {
+                cart[name].qty += 1;
+            } else {
+                cart[name] = { price: price, qty: 1 };
+            }
+            updateCartUI();
+            
+            const t = document.getElementById('toast');
+            t.textContent = '🛒 Added to Cart!';
+            t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 1500);
+        }
+
+        function toggleCart() {
+            const overlay = document.getElementById('cartOverlay');
+            overlay.style.display = overlay.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        function updateCartUI() {
+            const itemsDiv = document.getElementById('cartItems');
+            const itemNames = Object.keys(cart);
+            let totalQty = 0;
+            let totalAmount = 0;
+
+            if (itemNames.length === 0) {
+                itemsDiv.innerHTML = 'Your cart is empty.';
+                document.getElementById('cartCount').textContent = '0';
+                document.getElementById('cartTotal').textContent = '0';
+                return;
+            }
+
+            let html = '<div style="display:flex;flex-direction:column;gap:10px;">';
+            itemNames.forEach(name => {
+                const item = cart[name];
+                totalQty += item.qty;
+                totalAmount += (item.qty * item.price);
+                html += `
+                    <div style="display:flex;justify-content:space-between;align-items:center;background:rgba(255,255,255,0.05);padding:10px;border-radius:10px;">
+                        <div>
+                            <div style="font-weight:700;color:#e2e8f0;font-size:0.9rem;">${name}</div>
+                            <div style="font-size:0.8rem;color:#64748b;">₹${item.price.toFixed(2)} x ${item.qty}</div>
+                        </div>
+                        <div style="font-weight:800;color:#34d399;">₹${(item.price * item.qty).toFixed(2)}</div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+
+            itemsDiv.innerHTML = html;
+            document.getElementById('cartCount').textContent = totalQty;
+            document.getElementById('cartTotal').textContent = totalAmount.toFixed(2);
+        }
+
+        function checkoutWhatsApp() {
+            const itemNames = Object.keys(cart);
+            if (itemNames.length === 0) {
+                alert('Add items to cart first!');
+                return;
+            }
+
+            let address = document.getElementById('custAddress').value.trim();
+            let text = "🛒 *New Online Home Delivery Order*\n---------------------\n";
+            let total = 0;
+
+            itemNames.forEach(name => {
+                const item = cart[name];
+                text += `> ${item.qty}x ${name} (₹${item.price * item.qty})\n`;
+                total += (item.price * item.qty);
+            });
+
+            text += "\n---------------------\n";
+            text += `*Total Amount:* ₹${total.toFixed(2)}\n`;
+            if (address) {
+                text += `*Deliver To:* ${address}\n`;
+            } else {
+                text += `*Deliver To:* [Customer will provide address]\n`;
+            }
+
+            const shopPhoneNumber = "919876543210"; // Replace with real shopkeeper number if dynamic
+            const url = `https://wa.me/${shopPhoneNumber}?text=${encodeURIComponent(text)}`;
+            window.open(url, '_blank');
+        }
+
         function copyLink() {
             navigator.clipboard.writeText(window.location.href).then(() => {
                 const t = document.getElementById('toast');
+                t.textContent = '✅ Link copied!';
                 t.style.display = 'block';
                 setTimeout(() => t.style.display = 'none', 2000);
             });

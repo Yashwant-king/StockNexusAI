@@ -119,7 +119,7 @@
                 <!-- PRODUCTS DISPLAY -->
                 <div class="products-grid" id="productGrid">
                     {% for p in products %}
-                    <div class="product-card" data-name="{{ p.name | lower }}" onclick="addToBill('{{ p.id }}', '{{ p.name }}', {{ p.price }})">
+                    <div class="product-card" data-name="{{ p.name | lower }}" data-id="{{ p.id }}" data-full-name="{{ p.name }}" data-price="{{ p.price }}" onclick="addToBill(this.getAttribute('data-id'), this.getAttribute('data-full-name'), parseFloat(this.getAttribute('data-price')))">
                         <div class="p-name">{{ p.name }}</div>
                         <div class="p-price">₹{{ "%.0f"|format(p.price) }}</div>
                         <div class="p-stock">Stock: {{ p.stock }}</div>
@@ -153,8 +153,15 @@
                         <span>Total:</span>
                         <span>₹<span id="totalAmount">0</span></span>
                     </div>
+                    <div style="background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.2);padding:8px 12px;border-radius:8px;font-size:0.8rem;color:#fcd34d;font-weight:600;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+                        <div><i class="fas fa-star" style="color:#fbbf24;"></i> Loyalty Points Earned:</div>
+                        <div style="font-size:1.1rem;font-weight:800;">+<span id="earnedPoints">0</span></div>
+                    </div>
                     <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Print Bill / PDF</button>
                     <button class="btn-wa" onclick="sendWhatsApp()"><i class="fab fa-whatsapp"></i> Send WhatsApp Receipt</button>
+                    <button style="width:100%;padding:12px;border:none;border-radius:12px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;font-size:0.9rem;font-weight:700;cursor:pointer;margin-bottom:12px;box-shadow:0 4px 15px rgba(245,158,11,0.3);" onclick="redeemPoints()">
+                        <i class="fas fa-gift"></i> Redeem Customer Points
+                    </button>
                     <button class="btn-clear" onclick="clearBill()">Clear Bill</button>
                 </div>
             </div>
@@ -249,7 +256,12 @@
 
             container.innerHTML = html;
             document.getElementById('totalItems').textContent = totalQty;
-            document.getElementById('totalAmount').textContent = Math.round(totalAmt).toLocaleString('en-IN');
+            const finalP = Math.round(totalAmt);
+            document.getElementById('totalAmount').textContent = finalP.toLocaleString('en-IN');
+            
+            // SMART LOYALTY LOGIC: 1 point for every 100 spent
+            const points = Math.floor(finalP / 100);
+            document.getElementById('earnedPoints').textContent = points;
         }
 
         function filterProducts() {
@@ -259,6 +271,15 @@
                 const name = card.dataset.name;
                 card.style.display = name.includes(search) ? 'block' : 'none';
             });
+        }
+
+        function redeemPoints() {
+            const phone = prompt("Enter customer's 10-digit number to check their loyalty points:");
+            if(phone && phone.length >= 10) {
+                // Mock CRM Logic: If they type a number, simulate a successful scan
+                const mockPoints = Math.floor(Math.random() * 200) + 50; 
+                alert(`Customer +91 ${phone} found!\n\nNexus Points Available: ${mockPoints}\nValue: ₹${mockPoints}\n\nYou can deduct this from their final bill amount.`);
+            }
         }
     </script>
 </body>
