@@ -997,6 +997,93 @@ def inventory_summary():
             "error": str(e)
         }), 200
 
+@app.route('/scan-invoice', methods=['POST'])
+def scan_invoice():
+    """Use Groq Vision API to read an invoice image and extract items"""
+    try:
+        from groq import Groq
+        import base64
+        import json
+        import re
+
+        data = request.get_json()
+        image_data = data.get('image', '')
+        if not image_data:
+            return jsonify({"success": False, "error": "No image provided"}), 400
+
+        # Extract base64 part
+        if ',' in image_data:
+            image_data = image_data.split(',')[1]
+
+        groq_api_key = os.environ.get('GROQ_API_KEY')
+        if not groq_api_key:
+            return jsonify({"success": False, "error": "GROQ_API_KEY not configured."}), 500
+
+        client = Groq(api_key=groq_api_key)
+        
+        # Try vision models (fallback chain)
+        prompt = "You are an AI that reads grocery wholesale invoices. Return ONLY a valid JSON array of objects. Each object must have: 'product_name' (string), 'quantity_stock' (integer, default 10 if missing), 'total_revenue' (float, price of the item). Look at the image and extract as many valid items as you can. Do not wrap with ```json or anything, just return the raw array."
+        
+        try:
+            # We try standard vision model
+            completion = client.chat.completions.create(
+                model="llama-3.2-11b-vision-preview",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}}
+                        ]
+                    }
+                ],
+                temperature=0.1
+            )
+        except Exception as e:
+            # Fallback to the newer Llama 4 Scout if it's the 2026 version
+            try:
+                completion = client.chat.completions.create(
+                    model="llama-4-scout",
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {"type": "text", "text": prompt},
+                                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_data}"}}
+                            ]
+                        }
+                    ],
+                    temperature=0.1
+                )
+            except Exception as e2:
+                return jsonify({"success": False, "error": f"Vision API error. Need vision model access: {str(e2)}"}), 500
+        
+        response_text = completion.choices[0].message.content.strip()
+        
+        # Clean JSON markdown blocks if any
+        if response_text.startswith("```json"):
+            response_text = response_text[7:]
+        if response_text.startswith("```"):
+            response_text = response_text[3:]
+        if response_text.endswith("```"):
+            response_text = response_text[:-3]
+            
+        cleaned_json = response_text.strip()
+        
+        items = json.loads(cleaned_json)
+        
+        return jsonify({
+            "success": True,
+            "items": items
+        }), 200
+
+    except Exception as e:
+        print(f"Scan Invoice error: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": f"Failed to extract invoice: {str(e)}"
+        }), 500
+
 @app.route('/api/chat', methods=['POST'])
 def ai_chat():
     """AI Business Assistant powered by Groq LLaMA 3.3 70B"""

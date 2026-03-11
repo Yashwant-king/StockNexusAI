@@ -316,12 +316,23 @@
     <div class="main-grid">
 
         <!-- ADD ITEM FORM -->
-        <div class="glass-card">
-            <div class="glass-card-title">
-                <span style="width:32px;height:32px;background:linear-gradient(135deg,#10b981,#059669);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;">✚</span>
-                Add Single Item
+        <div class="glass-card" style="position:relative;">
+            <div id="aiScanOverlay" style="display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(6,8,24,0.8);backdrop-filter:blur(5px);z-index:10;border-radius:18px;align-items:center;justify-content:center;flex-direction:column;color:#fff;">
+                <i class="fas fa-spinner fa-spin fa-3x" style="color:#6366f1;margin-bottom:15px;"></i>
+                <h3 style="font-weight:700;">Scanning Bill with AI...</h3>
+                <p style="font-size:0.85rem;color:#94a3b8;margin-top:5px;">Groq Vision is analyzing your invoice</p>
             </div>
-            <div class="glass-card-subtitle">Add a new product directly to your Supabase database</div>
+            <div class="glass-card-title" style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="width:32px;height:32px;background:linear-gradient(135deg,#10b981,#059669);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;">✚</span>
+                    Add Single Item
+                </div>
+                <button type="button" onclick="document.getElementById('invoiceUpload').click()" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;border:none;padding:6px 12px;border-radius:8px;font-size:0.8rem;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;box-shadow:0 4px 10px rgba(245,158,11,0.3);">
+                    <i class="fas fa-camera"></i> AI Scan Bill
+                </button>
+                <input type="file" id="invoiceUpload" accept="image/*" style="display:none;" onchange="handleInvoiceUpload(event)">
+            </div>
+            <div class="glass-card-subtitle">Add a new product directly or scan a wholesale paper bill</div>
 
             <form id="addItemForm">
                 <div class="field-row">
@@ -582,6 +593,51 @@
 
         // Call on load
         loadNotifications();
+
+        // AI Invoice Scanner
+        async function handleInvoiceUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async function() {
+                const base64Image = reader.result;
+                const overlay = document.getElementById('aiScanOverlay');
+                overlay.style.display = 'flex';
+
+                try {
+                    const response = await fetch('/scan-invoice', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ image: base64Image })
+                    });
+                    
+                    const data = await response.json();
+                    overlay.style.display = 'none';
+
+                    if (data.success && data.items && data.items.length > 0) {
+                        const item = data.items[0]; // Auto-fill the first item
+                        document.getElementById('itemId').value = Math.floor(Math.random() * 9000) + 1000;
+                        document.getElementById('itemName').value = item.product_name || '';
+                        document.getElementById('itemStock').value = item.quantity_stock || 10;
+                        document.getElementById('itemMinStock').value = 5;
+                        document.getElementById('itemRevenue').value = item.total_revenue || 50;
+                        document.getElementById('itemExpiry').value = "12/12/26";
+                        alert(`Extracted ${data.items.length} items from the bill.\nAuto-filled the first item: ${item.product_name}.`);
+                    } else {
+                        alert(data.error || "Could not read any items from this image.");
+                    }
+                } catch (e) {
+                    overlay.style.display = 'none';
+                    alert("Error scanning invoice. Ensure the backend is running and API is valid.");
+                    console.error("OCR error:", e);
+                }
+                
+                // Clear the input so standard files can be re-uploaded
+                event.target.value = '';
+            };
+            reader.readAsDataURL(file);
+        }
     </script>
 </body>
 </html>
