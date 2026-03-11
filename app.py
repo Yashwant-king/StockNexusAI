@@ -401,6 +401,79 @@ def inventory_summary():
             "error": str(e)
         }), 200
 
+@app.route('/api/chat', methods=['POST'])
+def ai_chat():
+    """AI Business Assistant powered by Groq LLaMA 3.3 70B"""
+    try:
+        from groq import Groq
+
+        data = request.get_json()
+        user_message = data.get('message', '').strip()
+        if not user_message:
+            return jsonify({"success": False, "error": "No message provided"}), 400
+
+        groq_api_key = os.environ.get('GROQ_API_KEY')
+        if not groq_api_key:
+            return jsonify({"success": False, "error": "AI Assistant not configured. Please set GROQ_API_KEY."}), 500
+
+        # Get live inventory data to give the AI context
+        inventory_df = db.get_all_items()
+        from datetime import datetime
+        today = datetime.now()
+
+        if inventory_df is not None and not inventory_df.empty:
+            # Build a clean inventory summary for the AI
+            inventory_summary = f"Total products: {len(inventory_df)}\n"
+            inventory_summary += f"Total revenue: ₹{inventory_df['total_revenue'].sum():,.2f}\n\n"
+            inventory_summary += "PRODUCT LIST:\n"
+            inventory_summary += "ID | Name | Stock | Min Level | Revenue | Expiry\n"
+            inventory_summary += "-" * 60 + "\n"
+            for _, row in inventory_df.iterrows():
+                inventory_summary += f"{row.get('product_id','')} | {row.get('product_name','')} | {row.get('quantity_stock',0)} | {row.get('minimum_stock_level',0)} | ₹{row.get('total_revenue',0)} | {row.get('expiry_date','')}\n"
+
+            # Identify low stock and near-expiry
+            low_stock = inventory_df[inventory_df['quantity_stock'].astype(float) <= inventory_df['minimum_stock_level'].astype(float)]
+            inventory_summary += f"\nLOW STOCK ITEMS ({len(low_stock)}): {', '.join(low_stock['product_name'].tolist())}\n"
+        else:
+            inventory_summary = "No inventory data available yet."
+
+        system_prompt = f"""You are a smart AI business assistant for a local Kirana shop (Indian grocery store). 
+You can answer questions in Hindi, English, or Hinglish (mixed Hindi-English).
+You have access to the shopkeeper's live inventory data shown below.
+Be concise, helpful, and friendly. Use ₹ for Indian Rupee. 
+If someone asks in Hindi, respond in Hindi. If in English, respond in English.
+
+LIVE INVENTORY DATA (as of today {today.strftime('%d %B %Y')}):
+{inventory_summary}
+
+Your role: Help the shopkeeper understand their stock, sales, what to reorder, what is expiring, 
+which items are profitable, and give smart business suggestions. Always be practical and specific."""
+
+        client = Groq(api_key=groq_api_key)
+        chat_completion = client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
+            ],
+            model="llama-3.3-70b-versatile",
+            temperature=0.7,
+            max_tokens=500
+        )
+
+        ai_reply = chat_completion.choices[0].message.content
+
+        return jsonify({
+            "success": True,
+            "reply": ai_reply
+        }), 200
+
+    except Exception as e:
+        print(f"AI Chat error: {str(e)}")
+        return jsonify({
+            "success": False,
+            "error": f"AI Assistant error: {str(e)}"
+        }), 500
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
     
