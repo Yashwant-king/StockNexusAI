@@ -270,6 +270,12 @@ def init_khata_db():
                 created_at TIMESTAMP DEFAULT NOW()
             );
         """)
+        
+        # Add the new CRM Columns (Safe for existing tables)
+        cur.execute("ALTER TABLE khata_customers ADD COLUMN IF NOT EXISTS email VARCHAR(255);")
+        cur.execute("ALTER TABLE khata_customers ADD COLUMN IF NOT EXISTS address VARCHAR(500);")
+        cur.execute("ALTER TABLE khata_customers ADD COLUMN IF NOT EXISTS loyalty_points INTEGER DEFAULT 0;")
+        
         conn.commit()
         cur.close()
         conn.close()
