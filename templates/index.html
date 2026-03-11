@@ -1,351 +1,482 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StockNexus AI - Dashboard</title>
+    <title>StockNexus AI — Kirana Command Center</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
+    <style>
+        /* ===== PREMIUM OVERRIDES ===== */
+        body {
+            background: #060818;
+            background-image:
+                radial-gradient(ellipse 80% 50% at 20% -10%, rgba(99,102,241,0.15) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 40% at 80% 110%, rgba(6,182,212,0.12) 0%, transparent 60%),
+                radial-gradient(ellipse 40% 30% at 50% 50%, rgba(139,92,246,0.05) 0%, transparent 70%);
+            background-attachment: fixed;
+            min-height: 100vh;
+        }
 
+        /* ===== NAVBAR ===== */
+        .navbar {
+            background: rgba(6,8,24,0.8);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(99,102,241,0.2);
+            position: sticky; top:0; z-index:1000;
+        }
+        .navbar-container { max-width:1400px; margin:0 auto; padding:0 2rem; height:68px; display:flex; justify-content:space-between; align-items:center; }
+        .navbar-brand { font-size:1.4rem; font-weight:800; color:#fff; text-decoration:none; display:flex; align-items:center; gap:0.6rem; letter-spacing:-0.5px; }
+        .navbar-brand .brand-icon { width:34px; height:34px; background:linear-gradient(135deg,#6366f1,#8b5cf6); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; }
+        .nav-pill { display:flex; gap:4px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:4px; }
+        .nav-pill a { color:#94a3b8; text-decoration:none; font-size:0.82rem; font-weight:500; padding:6px 14px; border-radius:8px; transition:all 0.2s; }
+        .nav-pill a:hover, .nav-pill a.active { background:rgba(99,102,241,0.2); color:#a5b4fc; }
+        .nav-badge { background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; font-size:0.75rem; font-weight:700; padding:5px 14px; border-radius:20px; border:none; cursor:pointer; }
+
+        /* ===== HERO SECTION ===== */
+        .hero-section {
+            text-align:center; padding:3.5rem 2rem 2rem;
+            max-width:1400px; margin:0 auto;
+        }
+        .hero-badge { display:inline-flex; align-items:center; gap:6px; background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.3); color:#a5b4fc; padding:6px 16px; border-radius:20px; font-size:0.78rem; font-weight:600; margin-bottom:1.2rem; letter-spacing:0.5px; text-transform:uppercase; }
+        .hero-badge-dot { width:6px; height:6px; background:#6366f1; border-radius:50%; animation:pulse-dot 2s infinite; }
+        @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.5;transform:scale(0.8);} }
+        .hero-title { font-size:3rem; font-weight:900; letter-spacing:-2px; line-height:1.1; margin-bottom:1rem; background:linear-gradient(135deg,#fff 30%,#a5b4fc 70%,#67e8f9 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+        .hero-subtitle { color:#64748b; font-size:1rem; max-width:500px; margin:0 auto 0.5rem; }
+
+        /* ===== LAST UPDATED ===== */
+        #lastUpdatedBanner { text-align:center; margin:0.75rem auto 1.5rem; }
+        #lastUpdatedBanner span { background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.25); color:#34d399; border-radius:20px; padding:6px 18px; font-size:0.78rem; font-weight:500; }
+        #emptyStateBanner { text-align:center; margin:0.75rem auto 1.5rem; }
+        #emptyStateBanner span { background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.25); color:#fbbf24; border-radius:20px; padding:6px 18px; font-size:0.78rem; }
+
+        /* ===== STATS CARDS ===== */
+        .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; max-width:1400px; margin:0 auto 2rem; padding:0 2rem; }
+        .stat-card {
+            background:rgba(255,255,255,0.03);
+            border:1px solid rgba(255,255,255,0.07);
+            border-radius:16px; padding:1.4rem 1.6rem;
+            position:relative; overflow:hidden;
+            transition:all 0.3s ease; cursor:default;
+        }
+        .stat-card::before { content:''; position:absolute; inset:0; border-radius:16px; opacity:0; background:linear-gradient(135deg,rgba(99,102,241,0.08),rgba(139,92,246,0.05)); transition:opacity 0.3s; }
+        .stat-card:hover { border-color:rgba(99,102,241,0.3); transform:translateY(-2px); box-shadow:0 8px 30px rgba(99,102,241,0.15); }
+        .stat-card:hover::before { opacity:1; }
+        .stat-card-icon { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:18px; margin-bottom:1rem; }
+        .stat-icon-purple { background:rgba(99,102,241,0.15); color:#a5b4fc; }
+        .stat-icon-red { background:rgba(239,68,68,0.15); color:#fca5a5; }
+        .stat-icon-green { background:rgba(16,185,129,0.15); color:#6ee7b7; }
+        .stat-icon-amber { background:rgba(245,158,11,0.15); color:#fcd34d; }
+        .stat-number { font-size:2rem; font-weight:800; color:#fff; letter-spacing:-1px; line-height:1; margin-bottom:4px; }
+        .stat-label { font-size:0.78rem; color:#64748b; font-weight:500; text-transform:uppercase; letter-spacing:0.5px; }
+        .stat-trend { position:absolute; top:1.2rem; right:1.2rem; font-size:0.72rem; background:rgba(16,185,129,0.15); color:#34d399; padding:3px 8px; border-radius:10px; font-weight:600; }
+
+        /* ===== AI INSIGHTS ===== */
+        .insights-section { max-width:1400px; margin:0 auto 2rem; padding:0 2rem; }
+        .insights-card {
+            background:linear-gradient(135deg,rgba(99,102,241,0.08) 0%,rgba(139,92,246,0.05) 50%,rgba(6,182,212,0.05) 100%);
+            border:1px solid rgba(99,102,241,0.2); border-radius:20px; padding:1.6rem 2rem;
+        }
+        .insights-header { display:flex; align-items:center; gap:12px; margin-bottom:1.2rem; }
+        .ai-pulse { width:10px; height:10px; background:#6366f1; border-radius:50%; animation:pulse-ring 2s infinite; }
+        @keyframes pulse-ring { 0%{box-shadow:0 0 0 0 rgba(99,102,241,0.5);} 70%{box-shadow:0 0 0 10px transparent;} 100%{box-shadow:0 0 0 0 transparent;} }
+        .insights-title { font-weight:700; color:#e2e8f0; font-size:0.95rem; }
+        .insights-subtitle { color:#64748b; font-size:0.8rem; }
+        .insights-list { display:flex; flex-wrap:wrap; gap:10px; }
+        .insight-chip {
+            background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
+            border-radius:10px; padding:8px 14px; font-size:0.82rem; color:#cbd5e1;
+            display:flex; align-items:center; gap:8px; transition:all 0.2s;
+        }
+        .insight-chip:hover { border-color:rgba(99,102,241,0.3); color:#e2e8f0; }
+        .insight-chip i { font-size:0.75rem; }
+
+        /* ===== MAIN GRID ===== */
+        .main-grid { max-width:1400px; margin:0 auto 2rem; padding:0 2rem; display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; }
+
+        /* ===== FORM CARD ===== */
+        .glass-card {
+            background:rgba(255,255,255,0.03);
+            border:1px solid rgba(255,255,255,0.08);
+            border-radius:20px; padding:1.8rem;
+            transition:border-color 0.3s;
+        }
+        .glass-card:hover { border-color:rgba(99,102,241,0.25); }
+        .glass-card-title { font-size:1.05rem; font-weight:700; color:#e2e8f0; display:flex; align-items:center; gap:10px; margin-bottom:4px; }
+        .glass-card-subtitle { color:#64748b; font-size:0.82rem; margin-bottom:1.5rem; }
+
+        /* Form Fields */
+        .field-group { margin-bottom:1rem; }
+        .field-label { display:block; font-size:0.78rem; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px; }
+        .field-input {
+            width:100%; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.1);
+            border-radius:10px; padding:10px 14px; color:#e2e8f0; font-size:0.88rem; font-family:'Inter',sans-serif;
+            transition:all 0.2s; outline:none;
+        }
+        .field-input::placeholder { color:#475569; }
+        .field-input:focus { border-color:rgba(99,102,241,0.5); background:rgba(99,102,241,0.05); box-shadow:0 0 0 3px rgba(99,102,241,0.1); }
+        .field-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+        /* Buttons */
+        .btn-primary-glow {
+            width:100%; padding:12px; border:none; border-radius:12px;
+            background:linear-gradient(135deg,#6366f1,#8b5cf6);
+            color:#fff; font-size:0.9rem; font-weight:700; cursor:pointer;
+            display:flex; align-items:center; justify-content:center; gap:8px;
+            transition:all 0.3s; box-shadow:0 4px 20px rgba(99,102,241,0.3);
+            font-family:'Inter',sans-serif; margin-top:0.5rem;
+        }
+        .btn-primary-glow:hover { transform:translateY(-1px); box-shadow:0 6px 30px rgba(99,102,241,0.4); }
+        .btn-primary-glow:active { transform:translateY(0); }
+
+        /* File Upload */
+        .upload-zone {
+            border:2px dashed rgba(99,102,241,0.3); border-radius:14px; padding:2.5rem 1rem;
+            text-align:center; cursor:pointer; transition:all 0.3s;
+            background:rgba(99,102,241,0.03); margin-bottom:1rem;
+        }
+        .upload-zone:hover { border-color:rgba(99,102,241,0.6); background:rgba(99,102,241,0.06); }
+        .upload-zone input { display:none; }
+        .upload-icon { font-size:2.5rem; color:#6366f1; margin-bottom:0.75rem; display:block; }
+        .upload-text { color:#94a3b8; font-size:0.88rem; }
+        .upload-text strong { color:#e2e8f0; }
+
+        /* ===== FEATURES GRID ===== */
+        .features-section { max-width:1400px; margin:0 auto 2rem; padding:0 2rem; }
+        .features-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; }
+        .feature-card {
+            background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06);
+            border-radius:16px; padding:1.6rem; text-decoration:none; color:inherit;
+            transition:all 0.3s; display:flex; flex-direction:column; gap:1rem;
+        }
+        .feature-card:hover { border-color:rgba(99,102,241,0.35); background:rgba(99,102,241,0.05); transform:translateY(-3px); box-shadow:0 10px 30px rgba(0,0,0,0.3); }
+        .feature-icon-wrap { width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:20px; }
+        .feature-card h3 { font-size:0.95rem; font-weight:700; color:#e2e8f0; margin:0; }
+        .feature-card p { font-size:0.8rem; color:#64748b; line-height:1.5; margin:0; flex:1; }
+        .feature-link { font-size:0.8rem; color:#6366f1; font-weight:600; display:flex; align-items:center; gap:4px; }
+
+        /* ===== QUICK ACTIONS ===== */
+        .actions-section { max-width:1400px; margin:0 auto 3rem; padding:0 2rem; }
+        .actions-bar { background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); border-radius:16px; padding:1.2rem 1.6rem; display:flex; gap:1rem; align-items:center; flex-wrap:wrap; }
+        .action-btn { display:flex; align-items:center; gap:8px; padding:9px 18px; border-radius:10px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.04); color:#e2e8f0; font-size:0.85rem; font-weight:500; text-decoration:none; transition:all 0.2s; cursor:pointer; font-family:'Inter',sans-serif; }
+        .action-btn:hover { background:rgba(99,102,241,0.15); border-color:rgba(99,102,241,0.4); color:#a5b4fc; }
+        .action-btn i { font-size:0.85rem; }
+        .action-divider { width:1px; height:24px; background:rgba(255,255,255,0.06); }
+
+        /* ===== NOTIFICATION TOAST ===== */
+        #notification { position:fixed; top:80px; right:24px; z-index:9999; padding:14px 20px; border-radius:14px; font-size:0.88rem; font-weight:500; display:none; align-items:center; gap:10px; box-shadow:0 8px 30px rgba(0,0,0,0.4); max-width:320px; }
+        .notif-success { background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); color:#6ee7b7; }
+        .notif-error { background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#fca5a5; }
+
+        /* ===== CHAT BUTTON ===== */
+        #chatToggleBtn {
+            position:fixed; bottom:28px; right:28px; z-index:1001;
+            width:56px; height:56px; border-radius:50%; border:none;
+            background:linear-gradient(135deg,#6366f1,#8b5cf6);
+            color:#fff; font-size:22px; cursor:pointer;
+            box-shadow:0 4px 24px rgba(99,102,241,0.5);
+            display:flex; align-items:center; justify-content:center;
+            transition:all 0.3s;
+        }
+        #chatToggleBtn:hover { transform:scale(1.1); box-shadow:0 6px 32px rgba(99,102,241,0.6); }
+
+        /* ===== CHAT PANEL ===== */
+        #chatPanel {
+            position:fixed; bottom:96px; right:28px; z-index:1000;
+            width:370px; height:520px;
+            background:#0d1117; border:1px solid rgba(99,102,241,0.25);
+            border-radius:20px; display:none; flex-direction:column;
+            box-shadow:0 20px 60px rgba(0,0,0,0.6); overflow:hidden;
+        }
+        .chat-header { background:linear-gradient(135deg,#3730a3,#4f46e5); padding:16px 18px; display:flex; align-items:center; gap:12px; }
+        .chat-avatar { width:36px; height:36px; background:rgba(255,255,255,0.15); border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; }
+        .chat-title { font-weight:700; color:#fff; font-size:14px; }
+        .chat-status { font-size:11px; color:rgba(255,255,255,0.6); }
+        .chat-quick-btns { padding:10px 12px; border-bottom:1px solid rgba(255,255,255,0.06); display:flex; flex-wrap:wrap; gap:6px; }
+        .quick-btn { background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.25); color:#a5b4fc; border-radius:16px; padding:4px 12px; font-size:11px; cursor:pointer; transition:all 0.2s; font-family:'Inter',sans-serif; }
+        .quick-btn:hover { background:rgba(99,102,241,0.25); }
+        #chatMessages { flex:1; overflow-y:auto; padding:14px; display:flex; flex-direction:column; gap:10px; }
+        .msg-ai { background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.15); border-radius:14px; padding:10px 14px; font-size:13px; color:#e2e8f0; line-height:1.5; }
+        .msg-user { text-align:right; }
+        .msg-user-bubble { display:inline-block; background:rgba(99,102,241,0.25); border-radius:14px; padding:8px 14px; font-size:13px; color:#e2e8f0; max-width:80%; }
+        .msg-typing { background:rgba(255,255,255,0.04); border-radius:14px; padding:10px 14px; font-size:13px; color:#64748b; }
+        .chat-input-row { padding:12px; border-top:1px solid rgba(255,255,255,0.06); display:flex; gap:8px; }
+        .chat-input { flex:1; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:9px 14px; color:#e2e8f0; font-size:13px; outline:none; font-family:'Inter',sans-serif; transition:border-color 0.2s; }
+        .chat-input:focus { border-color:rgba(99,102,241,0.5); }
+        .chat-send-btn { background:linear-gradient(135deg,#6366f1,#8b5cf6); border:none; border-radius:12px; width:38px; height:38px; color:#fff; cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center; transition:all 0.2s; }
+        .chat-send-btn:hover { transform:scale(1.05); }
+
+        @media(max-width:900px) {
+            .stats-grid { grid-template-columns:repeat(2,1fr); }
+            .main-grid { grid-template-columns:1fr; }
+            .features-grid { grid-template-columns:1fr; }
+            .hero-title { font-size:2rem; }
+        }
+    </style>
+</head>
 <body>
-    <!-- Navigation -->
+
+    <!-- NAVBAR -->
     <nav class="navbar">
         <div class="navbar-container">
             <a href="/" class="navbar-brand">
-                <i class="fas fa-boxes"></i>
-                StockNexus AI Dashboard
+                <div class="brand-icon">🏪</div>
+                StockNexus AI
             </a>
-            <ul class="navbar-nav">
-                <li><a href="/" class="nav-link active">Home</a></li>
-                <li><a href="/inventory" class="nav-link">Inventory</a></li>
-                <li><a href="/analytics" class="nav-link">Analytics</a></li>
-                <li><a href="/predict" class="nav-link">Predictions</a></li>
-            </ul>
+            <div class="nav-pill">
+                <a href="/" class="active">Dashboard</a>
+                <a href="/inventory">Inventory</a>
+                <a href="/analytics">Analytics</a>
+                <a href="/predict">Predictions</a>
+            </div>
+            <button class="nav-badge" onclick="toggleChat()">🤖 AI Assistant</button>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <div class="main-container">
-        <!-- Hero Section -->
-        <div class="card text-center mb-6 hero-card">
-            <div class="card-header">
-                <h1 class="card-title">
-                    <i class="fas fa-chart-line text-primary"></i>
-                    Welcome to StockNexus AI
-                </h1>
-                <p class="card-subtitle">
-                    Streamline your inventory operations with AI-powered insights and predictive analytics
-                </p>
-            </div>
-        <!-- Last Updated Banner -->
-        <div id="lastUpdatedBanner" style="text-align:center; margin-bottom:16px; display:none;">
-            <span style="background:rgba(99,102,241,0.15); border:1px solid rgba(99,102,241,0.3); color:#a5b4fc;
-                border-radius:20px; padding:6px 18px; font-size:13px;">
-                🕐 Last Updated: <strong id="lastUpdatedTime">--</strong>
-            </span>
-        </div>
-        <!-- Empty State Banner -->
-        <div id="emptyStateBanner" style="text-align:center; margin-bottom:16px; display:none;">
-            <span style="background:rgba(251,191,36,0.1); border:1px solid rgba(251,191,36,0.3); color:#fbbf24;
-                border-radius:20px; padding:6px 18px; font-size:13px;">
-                📦 No inventory yet — add your first product below!
-            </span>
-        </div>
-        </div>
+    <!-- HERO -->
+    <section class="hero-section">
+        <div class="hero-badge"><span class="hero-badge-dot"></span>Powered by LLaMA 3.3 · 70B</div>
+        <h1 class="hero-title">Kirana Command Center</h1>
+        <p class="hero-subtitle">Smart inventory management built for Indian retail. Track, predict, and grow — in Hindi or English.</p>
 
-        <!-- Nexus AI Insights -->
-        <div class="card mb-6 ai-insights-card">
-            <div class="card-header">
-                <h2 class="card-title">
-                    <i class="fas fa-robot text-accent"></i>
-                    Nexus AI Global Insights
-                </h2>
-                <p class="card-subtitle">Real-time business intelligence generated by our local neural engine</p>
-            </div>
-            <div id="aiInsightsList" class="insights-container">
-                <div class="insight-item">
-                    <i class="fas fa-circle-notch fa-spin"></i>
-                    <span>Analyzing inventory health...</span>
+        <div id="lastUpdatedBanner" style="display:none; margin-top:1rem;">
+            <span>🕐 Last Updated: <strong id="lastUpdatedTime">--</strong></span>
+        </div>
+        <div id="emptyStateBanner" style="display:none; margin-top:1rem;">
+            <span>📦 No inventory yet — add your first product below!</span>
+        </div>
+    </section>
+
+    <!-- STATS GRID -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-card-icon stat-icon-purple"><i class="fas fa-boxes"></i></div>
+            <div class="stat-number" id="totalProducts">—</div>
+            <div class="stat-label">Total Products</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon stat-icon-red"><i class="fas fa-exclamation-triangle"></i></div>
+            <div class="stat-number" id="lowStockCount">—</div>
+            <div class="stat-label">Low Stock Alerts</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon stat-icon-green"><i class="fas fa-rupee-sign"></i></div>
+            <div class="stat-number" id="totalRevenue">—</div>
+            <div class="stat-label">Total Revenue</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-card-icon stat-icon-amber"><i class="fas fa-calendar-times"></i></div>
+            <div class="stat-number" id="nearExpiryCount">—</div>
+            <div class="stat-label">Near Expiry</div>
+        </div>
+    </div>
+
+    <!-- AI INSIGHTS -->
+    <div class="insights-section">
+        <div class="insights-card">
+            <div class="insights-header">
+                <div class="ai-pulse"></div>
+                <div>
+                    <div class="insights-title">Nexus AI — Live Intelligence</div>
+                    <div class="insights-subtitle">Auto-generated business insights from your inventory</div>
                 </div>
             </div>
-        </div>
-
-        <!-- Quick Stats -->
-        <div class="grid grid-4 mb-6">
-            <div class="stats-card">
-                <div class="stats-number" id="totalProducts">-</div>
-                <div class="stats-label">Total Products</div>
-            </div>
-            <div class="stats-card">
-                <div class="stats-number" id="lowStockCount">-</div>
-                <div class="stats-label">Low Stock Items</div>
-            </div>
-            <div class="stats-card">
-                <div class="stats-number" id="totalRevenue">-</div>
-                <div class="stats-label">Total Revenue</div>
-            </div>
-            <div class="stats-card">
-                <div class="stats-number" id="nearExpiryCount">-</div>
-                <div class="stats-label">Near Expiry</div>
+            <div id="aiInsightsList" class="insights-list">
+                <div class="insight-chip"><i class="fas fa-circle-notch fa-spin"></i> Analyzing your inventory...</div>
             </div>
         </div>
+    </div>
 
-        <!-- Data Entry Section -->
-        <div class="grid grid-2 mb-6" style="align-items: start;">
-            <!-- Direct Add Item Form -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        <i class="fas fa-plus-circle text-success"></i>
-                        Add Single Item
-                    </h2>
-                    <p class="card-subtitle">
-                        Directly add a new product to your inventory database
-                    </p>
-                </div>
+    <!-- MAIN DATA ENTRY GRID -->
+    <div class="main-grid">
 
-                <form id="addItemForm" class="mb-4">
-                    <div class="form-group mb-3">
-                        <label for="itemId" class="form-label">Product ID</label>
-                        <input type="text" id="itemId" name="itemId" class="form-control" placeholder="e.g. 101" required>
+        <!-- ADD ITEM FORM -->
+        <div class="glass-card">
+            <div class="glass-card-title">
+                <span style="width:32px;height:32px;background:linear-gradient(135deg,#10b981,#059669);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;">✚</span>
+                Add Single Item
+            </div>
+            <div class="glass-card-subtitle">Add a new product directly to your Supabase database</div>
+
+            <form id="addItemForm">
+                <div class="field-row">
+                    <div class="field-group">
+                        <label class="field-label">Product ID</label>
+                        <input type="text" id="itemId" name="itemId" class="field-input" placeholder="e.g. 1001" required>
                     </div>
-                    <div class="form-group mb-3">
-                        <label for="itemName" class="form-label">Product Name</label>
-                        <input type="text" id="itemName" name="itemName" class="form-control" placeholder="e.g. Organic Apples" required>
+                    <div class="field-group">
+                        <label class="field-label">Product Name</label>
+                        <input type="text" id="itemName" name="itemName" class="field-input" placeholder="e.g. Basmati Rice" required>
                     </div>
-                    <div class="grid grid-2 mb-3">
-                        <div class="form-group">
-                            <label for="itemStock" class="form-label">Current Stock</label>
-                            <input type="number" id="itemStock" name="itemStock" class="form-control" required min="0">
-                        </div>
-                        <div class="form-group">
-                            <label for="itemMinStock" class="form-label">Min Level</label>
-                            <input type="number" id="itemMinStock" name="itemMinStock" class="form-control" required min="0">
-                        </div>
+                </div>
+                <div class="field-row">
+                    <div class="field-group">
+                        <label class="field-label">Current Stock</label>
+                        <input type="number" id="itemStock" name="itemStock" class="field-input" placeholder="100" required min="0">
                     </div>
-                    <div class="grid grid-2 mb-3">
-                        <div class="form-group">
-                            <label for="itemRevenue" class="form-label">Total Revenue ($)</label>
-                            <input type="number" id="itemRevenue" name="itemRevenue" class="form-control" required min="0" step="0.01">
-                        </div>
-                        <div class="form-group">
-                            <label for="itemExpiry" class="form-label">Expiry Date</label>
-                            <input type="text" id="itemExpiry" name="itemExpiry" class="form-control" placeholder="DD/MM/YY" required>
-                        </div>
+                    <div class="field-group">
+                        <label class="field-label">Min Level Alert</label>
+                        <input type="number" id="itemMinStock" name="itemMinStock" class="field-input" placeholder="20" required min="0">
                     </div>
-
-                    <button type="submit" class="btn btn-success" style="width: 100%; justify-content: center;">
-                        <i class="fas fa-save"></i>
-                        Add to Database
-                    </button>
-                </form>
-            </div>
-
-            <!-- Bulk File Upload Section -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        <i class="fas fa-upload text-primary"></i>
-                        Bulk Upload (CSV)
-                    </h2>
-                    <p class="card-subtitle">
-                        Upload a spreadsheet to update many items at once
-                    </p>
                 </div>
-
-                <form id="uploadForm" enctype="multipart/form-data" class="mb-4">
-                    <div class="form-group">
-                        <div class="file-upload">
-                            <input type="file" name="file" id="fileInput" accept=".csv" required>
-                            <label for="fileInput" class="file-upload-label" style="padding: 2rem;">
-                                <div>
-                                    <i class="fas fa-file-csv fa-3x mb-3" style="color: var(--primary);"></i>
-                                    <h3>Drag & Drop CSV</h3>
-                                    <small>Click to browse files</small>
-                                </div>
-                            </label>
-                        </div>
+                <div class="field-row">
+                    <div class="field-group">
+                        <label class="field-label">Revenue (₹)</label>
+                        <input type="number" id="itemRevenue" name="itemRevenue" class="field-input" placeholder="500.00" required min="0" step="0.01">
                     </div>
-
-                    <div id="filePreview"></div>
-
-                    <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">
-                        <i class="fas fa-upload"></i>
-                        Process Batch
-                    </button>
-                </form>
-            </div>
-        </div>
-
-        <!-- Features Grid -->
-        <div class="grid grid-3 mb-6">
-            <div class="card text-center">
-                <div class="card-header">
-                    <i class="fas fa-boxes fa-3x text-primary mb-3"></i>
-                    <h3 class="card-title">Inventory Management</h3>
-                    <p class="card-subtitle">Track stock levels, monitor expiry dates, and manage product information
-                        efficiently</p>
+                    <div class="field-group">
+                        <label class="field-label">Expiry Date</label>
+                        <input type="text" id="itemExpiry" name="itemExpiry" class="field-input" placeholder="DD/MM/YY" required>
+                    </div>
                 </div>
-                <a href="/inventory" class="btn btn-outline">
-                    <i class="fas fa-arrow-right"></i>
-                    View Inventory
-                </a>
-            </div>
-
-            <div class="card text-center">
-                <div class="card-header">
-                    <i class="fas fa-chart-bar fa-3x text-primary mb-3"></i>
-                    <h3 class="card-title">Sales Analytics</h3>
-                    <p class="card-subtitle">Analyze sales trends, identify top-performing products, and generate
-                        insights</p>
-                </div>
-                <a href="/analytics" class="btn btn-outline">
-                    <i class="fas fa-arrow-right"></i>
-                    View Analytics
-                </a>
-            </div>
-
-            <div class="card text-center">
-                <div class="card-header">
-                    <i class="fas fa-brain fa-3x text-primary mb-3"></i>
-                    <h3 class="card-title">AI Predictions</h3>
-                    <p class="card-subtitle">Use machine learning to predict sales and optimize inventory levels</p>
-                </div>
-                <a href="/predict" class="btn btn-outline">
-                    <i class="fas fa-arrow-right"></i>
-                    Make Predictions
-                </a>
-            </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title">
-                    <i class="fas fa-bolt"></i>
-                    Quick Actions
-                </h2>
-                <p class="card-subtitle">
-                    Access frequently used features and tools
-                </p>
-            </div>
-
-            <div class="grid grid-4">
-                <a href="/inventory" class="btn btn-primary">
-                    <i class="fas fa-list"></i>
-                    View Inventory
-                </a>
-                <a href="/analytics" class="btn btn-success">
-                    <i class="fas fa-chart-line"></i>
-                    Sales Analytics
-                </a>
-                <a href="/predict" class="btn btn-warning">
-                    <i class="fas fa-calculator"></i>
-                    Predictions
-                </a>
-                <button onclick="window.StockApp.trainModel()" class="btn btn-info">
-                    <i class="fas fa-cog"></i>
-                    Train Model
+                <button type="submit" class="btn-primary-glow">
+                    <i class="fas fa-database"></i> Save to Database
                 </button>
+            </form>
+        </div>
+
+        <!-- BULK UPLOAD -->
+        <div class="glass-card">
+            <div class="glass-card-title">
+                <span style="width:32px;height:32px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;">📂</span>
+                Bulk CSV Upload
+            </div>
+            <div class="glass-card-subtitle">Upload a spreadsheet to update your entire inventory at once</div>
+
+            <form id="uploadForm" enctype="multipart/form-data">
+                <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+                    <input type="file" name="file" id="fileInput" accept=".csv" required style="display:none" onchange="previewFile(this)">
+                    <span class="upload-icon">📊</span>
+                    <div class="upload-text"><strong>Click to upload CSV</strong><br>or drag & drop your file here</div>
+                    <div id="filePreviewName" style="margin-top:10px; color:#6366f1; font-size:0.82rem; font-weight:600;"></div>
+                </div>
+                <div id="filePreview"></div>
+                <button type="submit" class="btn-primary-glow" style="background:linear-gradient(135deg,#3730a3,#6366f1);">
+                    <i class="fas fa-upload"></i> Upload & Replace All Data
+                </button>
+            </form>
+
+            <!-- CSV Format Guide -->
+            <div style="margin-top:1.2rem; padding:1rem; background:rgba(99,102,241,0.06); border:1px solid rgba(99,102,241,0.15); border-radius:10px;">
+                <div style="font-size:0.75rem; font-weight:600; color:#6366f1; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Required CSV Format</div>
+                <code style="font-size:0.72rem; color:#94a3b8; line-height:1.8; display:block;">
+                    product_id, product_name, quantity_stock,<br>
+                    minimum_stock_level, total_revenue, expiry_date
+                </code>
             </div>
         </div>
     </div>
 
-    <!-- AI Chat Assistant Floating Button -->
-    <button id="chatToggleBtn" onclick="toggleChat()" style="
-        position: fixed; bottom: 30px; right: 30px; z-index: 1000;
-        width: 60px; height: 60px; border-radius: 50%; border: none;
-        background: linear-gradient(135deg, #6366f1, #8b5cf6);
-        color: white; font-size: 24px; cursor: pointer;
-        box-shadow: 0 4px 20px rgba(99,102,241,0.5);
-        display: flex; align-items: center; justify-content: center;
-        transition: transform 0.2s ease;">
-        🤖
-    </button>
+    <!-- FEATURES GRID -->
+    <div class="features-section">
+        <div class="features-grid">
+            <a href="/inventory" class="feature-card">
+                <div class="feature-icon-wrap" style="background:rgba(99,102,241,0.15); color:#a5b4fc;">📦</div>
+                <div>
+                    <h3>Inventory Manager</h3>
+                    <p>Track stock levels, monitor expiry dates, and get smart restocking recommendations from AI.</p>
+                </div>
+                <div class="feature-link"><i class="fas fa-arrow-right"></i> View Inventory</div>
+            </a>
+            <a href="/analytics" class="feature-card">
+                <div class="feature-icon-wrap" style="background:rgba(6,182,212,0.15); color:#67e8f9;">📈</div>
+                <div>
+                    <h3>Sales Analytics</h3>
+                    <p>Visualize revenue trends, identify top-performing products, and discover seasonal patterns.</p>
+                </div>
+                <div class="feature-link"><i class="fas fa-arrow-right"></i> View Analytics</div>
+            </a>
+            <a href="/predict" class="feature-card">
+                <div class="feature-icon-wrap" style="background:rgba(139,92,246,0.15); color:#c4b5fd;">🧠</div>
+                <div>
+                    <h3>AI Demand Forecast</h3>
+                    <p>Use deep learning (LSTM) to predict how much stock you'll need next month before you run out.</p>
+                </div>
+                <div class="feature-link"><i class="fas fa-arrow-right"></i> Make Predictions</div>
+            </a>
+        </div>
+    </div>
 
-    <!-- AI Chat Panel -->
-    <div id="chatPanel" style="
-        position: fixed; bottom: 100px; right: 30px; z-index: 999;
-        width: 360px; height: 500px;
-        background: #1a1a2e; border: 1px solid rgba(99,102,241,0.3);
-        border-radius: 16px; display: none; flex-direction: column;
-        box-shadow: 0 8px 40px rgba(0,0,0,0.5); overflow: hidden;">
+    <!-- QUICK ACTIONS -->
+    <div class="actions-section">
+        <div class="actions-bar">
+            <span style="color:#64748b; font-size:0.78rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px;">Quick Actions</span>
+            <div class="action-divider"></div>
+            <a href="/inventory" class="action-btn"><i class="fas fa-list"></i> View Inventory</a>
+            <a href="/analytics" class="action-btn"><i class="fas fa-chart-line"></i> Analytics</a>
+            <a href="/predict" class="action-btn"><i class="fas fa-brain"></i> Predict Demand</a>
+            <button onclick="window.StockApp && window.StockApp.trainModel()" class="action-btn"><i class="fas fa-cog"></i> Train Model</button>
+            <button onclick="toggleChat()" class="action-btn" style="color:#a5b4fc; border-color:rgba(99,102,241,0.3);"><i class="fas fa-robot"></i> Ask AI</button>
+        </div>
+    </div>
 
-        <!-- Chat Header -->
-        <div style="background: linear-gradient(135deg,#6366f1,#8b5cf6); padding: 16px; display:flex; align-items:center; gap:10px;">
-            <span style="font-size:24px;">🤖</span>
+    <!-- NOTIFICATION -->
+    <div id="notification"></div>
+
+    <!-- AI CHAT BUTTON -->
+    <button id="chatToggleBtn" onclick="toggleChat()">🤖</button>
+
+    <!-- AI CHAT PANEL -->
+    <div id="chatPanel">
+        <div class="chat-header">
+            <div class="chat-avatar">🤖</div>
             <div>
-                <div style="color:white; font-weight:700; font-size:15px;">Nexus AI Assistant</div>
-                <div style="color:rgba(255,255,255,0.7); font-size:11px;">Ask anything about your inventory • Hindi/English</div>
+                <div class="chat-title">Nexus AI Assistant</div>
+                <div class="chat-status">● Online · LLaMA 3.3 70B · Hindi/English</div>
             </div>
         </div>
-
-        <!-- Quick Questions -->
-        <div style="padding: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); display:flex; flex-wrap:wrap; gap:6px;">
-            <button onclick="sendQuickQuestion('Which items are low on stock?')" style="background:rgba(99,102,241,0.2); border:1px solid rgba(99,102,241,0.4); color:#a5b4fc; border-radius:20px; padding:4px 10px; font-size:11px; cursor:pointer;">Low Stock?</button>
-            <button onclick="sendQuickQuestion('Kaunsa item expiry ke paas hai?')" style="background:rgba(99,102,241,0.2); border:1px solid rgba(99,102,241,0.4); color:#a5b4fc; border-radius:20px; padding:4px 10px; font-size:11px; cursor:pointer;">Expiry?</button>
-            <button onclick="sendQuickQuestion('What is my total revenue?')" style="background:rgba(99,102,241,0.2); border:1px solid rgba(99,102,241,0.4); color:#a5b4fc; border-radius:20px; padding:4px 10px; font-size:11px; cursor:pointer;">Revenue?</button>
-            <button onclick="sendQuickQuestion('Which product should I reorder today?')" style="background:rgba(99,102,241,0.2); border:1px solid rgba(99,102,241,0.4); color:#a5b4fc; border-radius:20px; padding:4px 10px; font-size:11px; cursor:pointer;">Reorder?</button>
+        <div class="chat-quick-btns">
+            <button class="quick-btn" onclick="sendQuickQuestion('Which items are low on stock?')">Low Stock?</button>
+            <button class="quick-btn" onclick="sendQuickQuestion('Kaunsa item expiry ke paas hai?')">Expiry?</button>
+            <button class="quick-btn" onclick="sendQuickQuestion('What is my total revenue?')">Revenue?</button>
+            <button class="quick-btn" onclick="sendQuickQuestion('Aaj kya order karna chahiye?')">Reorder?</button>
         </div>
-
-        <!-- Chat Messages -->
-        <div id="chatMessages" style="flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:10px;">
-            <div style="background:rgba(99,102,241,0.15); border-radius:12px; padding:10px 14px; font-size:13px; color:#e2e8f0; border-left:3px solid #6366f1;">
-                👋 Namaste! I am your Kirana AI Assistant. Ask me anything about your inventory in Hindi or English!
-            </div>
+        <div id="chatMessages">
+            <div class="msg-ai">👋 Namaste! Main aapka Kirana AI Assistant hoon. Inventory ke baare mein kuch bhi poochho — Hindi ya English mein!</div>
         </div>
-
-        <!-- Chat Input -->
-        <div style="padding: 12px; border-top: 1px solid rgba(255,255,255,0.1); display:flex; gap:8px;">
-            <input id="chatInput" type="text" placeholder="Kuch bhi poochho... / Ask anything..."
-                onkeypress="if(event.key==='Enter') sendChatMessage()"
-                style="flex:1; background:rgba(255,255,255,0.07); border:1px solid rgba(255,255,255,0.15);
-                border-radius:20px; padding:8px 14px; color:white; font-size:13px; outline:none;">
-            <button onclick="sendChatMessage()" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);
-                border:none; border-radius:50%; width:36px; height:36px; color:white; cursor:pointer; font-size:16px;">➤</button>
+        <div class="chat-input-row">
+            <input id="chatInput" type="text" class="chat-input" placeholder="Kuch bhi poochho..." onkeypress="if(event.key==='Enter') sendChatMessage()">
+            <button class="chat-send-btn" onclick="sendChatMessage()">➤</button>
         </div>
     </div>
 
-    <!--     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     <script>
-        // Patch loadDashboardData to also show last_updated
-        const _origLoad = window.StockApp ? window.StockApp.loadDashboardData.bind(window.StockApp) : null;
-        document.addEventListener('DOMContentLoaded', () => {
-            // Hook into every API call for inventory-summary
-            const origFetch = window.fetch;
-            window.fetch = async function(url, opts) {
-                const res = await origFetch(url, opts);
-                if (typeof url === 'string' && url.includes('inventory-summary')) {
-                    const clone = res.clone();
-                    clone.json().then(data => {
-                        const banner = document.getElementById('lastUpdatedBanner');
-                        const emptyBanner = document.getElementById('emptyStateBanner');
-                        const timeEl = document.getElementById('lastUpdatedTime');
-                        if (data.last_updated) {
-                            timeEl.textContent = data.last_updated;
-                            if (banner) banner.style.display = 'block';
-                            if (emptyBanner) emptyBanner.style.display = 'none';
-                        } else if (data.metrics && data.metrics.total_products === 0) {
-                            if (banner) banner.style.display = 'none';
-                            if (emptyBanner) emptyBanner.style.display = 'block';
-                        }
-                    }).catch(() => {});
-                }
-                return res;
-            };
-        });
-
-        function toggleChat() {
-            const panel = document.getElementById('chatPanel');
-            panel.style.display = panel.style.display === 'none' || panel.style.display === '' ? 'flex' : 'none';
+        function previewFile(input) {
+            const name = input.files[0]?.name || '';
+            document.getElementById('filePreviewName').textContent = name ? '✅ ' + name + ' selected' : '';
         }
 
-        function sendQuickQuestion(question) {
-            document.getElementById('chatInput').value = question;
+        // Intercept fetch to capture last_updated
+        const _origFetch = window.fetch;
+        window.fetch = async function(url, opts) {
+            const res = await _origFetch(url, opts);
+            if (typeof url === 'string' && url.includes('inventory-summary')) {
+                res.clone().json().then(data => {
+                    const banner = document.getElementById('lastUpdatedBanner');
+                    const empty = document.getElementById('emptyStateBanner');
+                    const timeEl = document.getElementById('lastUpdatedTime');
+                    if (data.last_updated) {
+                        if(timeEl) timeEl.textContent = data.last_updated;
+                        if(banner) banner.style.display = 'block';
+                        if(empty) empty.style.display = 'none';
+                    } else if (data.metrics && data.metrics.total_products === 0) {
+                        if(banner) banner.style.display = 'none';
+                        if(empty) empty.style.display = 'block';
+                    }
+                }).catch(()=>{});
+            }
+            return res;
+        };
+
+        function toggleChat() {
+            const p = document.getElementById('chatPanel');
+            p.style.display = (p.style.display === 'none' || !p.style.display) ? 'flex' : 'none';
+        }
+
+        function sendQuickQuestion(q) {
+            document.getElementById('chatInput').value = q;
             sendChatMessage();
         }
 
@@ -353,39 +484,27 @@
             const input = document.getElementById('chatInput');
             const message = input.value.trim();
             if (!message) return;
-
-            const messagesDiv = document.getElementById('chatMessages');
-            messagesDiv.innerHTML += `<div style="text-align:right;"><div style="display:inline-block; background:rgba(99,102,241,0.3); border-radius:12px; padding:8px 14px; font-size:13px; color:#e2e8f0; max-width:80%;">${message}</div></div>`;
+            const msgs = document.getElementById('chatMessages');
+            msgs.innerHTML += `<div class="msg-user"><div class="msg-user-bubble">${message}</div></div>`;
             input.value = '';
-
-            const typingId = 'typing-' + Date.now();
-            messagesDiv.innerHTML += `<div id="${typingId}" style="background:rgba(255,255,255,0.05); border-radius:12px; padding:10px 14px; font-size:13px; color:#94a3b8;">🤖 Thinking...</div>`;
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-
+            const tid = 'typing-' + Date.now();
+            msgs.innerHTML += `<div id="${tid}" class="msg-typing">🤖 Thinking...</div>`;
+            msgs.scrollTop = msgs.scrollHeight;
             try {
-                const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({message})
-                });
-                const data = await response.json();
-                document.getElementById(typingId).remove();
+                const res = await fetch('/api/chat', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({message}) });
+                const data = await res.json();
+                document.getElementById(tid)?.remove();
                 if (data.success) {
-                    messagesDiv.innerHTML += `<div style="background:rgba(99,102,241,0.15); border-radius:12px; padding:10px 14px; font-size:13px; color:#e2e8f0; border-left:3px solid #6366f1;">${data.reply.replace(/\n/g,'<br>')}</div>`;
+                    msgs.innerHTML += `<div class="msg-ai">${data.reply.replace(/\n/g,'<br>')}</div>`;
                 } else {
-                    messagesDiv.innerHTML += `<div style="background:rgba(220,38,38,0.15); border-radius:12px; padding:10px 14px; font-size:13px; color:#fca5a5;">❌ ${data.error}</div>`;
+                    msgs.innerHTML += `<div class="msg-ai" style="color:#fca5a5;">❌ ${data.error}</div>`;
                 }
-            } catch (e) {
-                document.getElementById(typingId).remove();
-                messagesDiv.innerHTML += `<div style="background:rgba(220,38,38,0.15); border-radius:12px; padding:10px 14px; font-size:13px; color:#fca5a5;">❌ Connection error.</div>`;
+            } catch(e) {
+                document.getElementById(tid)?.remove();
+                msgs.innerHTML += `<div class="msg-ai" style="color:#fca5a5;">❌ Connection error.</div>`;
             }
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            msgs.scrollTop = msgs.scrollHeight;
         }
     </script>
 </body>
-
 </html>
-
-</body>
-
-</html>
