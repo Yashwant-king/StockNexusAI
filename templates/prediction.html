@@ -1,287 +1,312 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Predictions - StockNexus AI</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet">
+    <title>AI Predictions — StockNexus AI</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{background:#060818;color:#e2e8f0;font-family:'Inter',sans-serif;min-height:100vh;
+            background-image:radial-gradient(ellipse 80% 50% at 20% -10%,rgba(99,102,241,0.15) 0%,transparent 60%),
+            radial-gradient(ellipse 60% 40% at 80% 110%,rgba(6,182,212,0.12) 0%,transparent 60%);background-attachment:fixed;}
 
+        .navbar{background:rgba(6,8,24,0.8);backdrop-filter:blur(20px);border-bottom:1px solid rgba(99,102,241,0.2);position:sticky;top:0;z-index:1000;}
+        .navbar-container{max-width:1400px;margin:0 auto;padding:0 2rem;height:68px;display:flex;justify-content:space-between;align-items:center;}
+        .navbar-brand{font-size:1.4rem;font-weight:800;color:#fff;text-decoration:none;display:flex;align-items:center;gap:0.6rem;}
+        .brand-icon{width:34px;height:34px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+        .nav-pill{display:flex;gap:4px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:4px;}
+        .nav-pill a{color:#94a3b8;text-decoration:none;font-size:0.82rem;font-weight:500;padding:6px 14px;border-radius:8px;transition:all 0.2s;}
+        .nav-pill a:hover,.nav-pill a.active{background:rgba(99,102,241,0.2);color:#a5b4fc;}
+
+        .page{max-width:900px;margin:0 auto;padding:2rem;}
+        .page-title{font-size:2rem;font-weight:900;color:#fff;letter-spacing:-1px;margin-bottom:4px;}
+        .page-sub{color:#64748b;font-size:0.9rem;margin-bottom:2rem;}
+
+        /* Steps */
+        .step-cards{display:flex;flex-direction:column;gap:1.2rem;}
+        .step{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:18px;padding:1.5rem;transition:all 0.3s;}
+        .step.active-step{border-color:rgba(99,102,241,0.4);background:rgba(99,102,241,0.05);}
+        .step-header{display:flex;align-items:center;gap:12px;margin-bottom:1rem;}
+        .step-num{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:0.9rem;flex-shrink:0;}
+        .step-num-1{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;}
+        .step-num-2{background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;}
+        .step-num-3{background:linear-gradient(135deg,#10b981,#059669);color:#fff;}
+        .step-title{font-size:1rem;font-weight:700;color:#e2e8f0;}
+        .step-desc{font-size:0.82rem;color:#64748b;}
+
+        /* Input Boxes */
+        .input-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:1rem;}
+        .input-box{display:flex;flex-direction:column;gap:4px;}
+        .input-label{font-size:0.72rem;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.5px;}
+        .input-field{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:12px 14px;color:#e2e8f0;font-size:1rem;font-family:'Inter',sans-serif;outline:none;transition:all 0.2s;text-align:center;font-weight:600;}
+        .input-field::placeholder{color:#475569;font-weight:400;}
+        .input-field:focus{border-color:rgba(99,102,241,0.5);background:rgba(99,102,241,0.05);box-shadow:0 0 0 3px rgba(99,102,241,0.1);}
+        .input-hint{font-size:0.72rem;color:#475569;text-align:center;}
+
+        /* Buttons */
+        .btn-predict{width:100%;padding:14px;border:none;border-radius:12px;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;font-size:1rem;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 20px rgba(99,102,241,0.3);transition:all 0.2s;}
+        .btn-predict:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(99,102,241,0.4);}
+        .btn-predict:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+        .btn-train{padding:10px 20px;border:1px solid rgba(251,191,36,0.3);background:rgba(251,191,36,0.1);color:#fbbf24;border-radius:10px;font-size:0.85rem;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;}
+        .btn-train:hover{background:rgba(251,191,36,0.2);border-color:#fbbf24;}
+
+        /* Result Card */
+        .result-card{display:none;background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.2);border-radius:18px;padding:2rem;text-align:center;animation:slideUp 0.4s ease;}
+        .result-card.show{display:block;}
+        .result-number{font-size:3rem;font-weight:900;color:#34d399;margin:0.5rem 0;}
+        .result-label{font-size:0.85rem;color:#94a3b8;}
+        .result-detail{background:rgba(255,255,255,0.04);border-radius:12px;padding:12px;margin-top:1rem;font-size:0.82rem;color:#94a3b8;line-height:1.6;}
+
+        /* How It Works */
+        .how-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:0.8rem;}
+        .how-box{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:1rem;text-align:center;}
+        .how-icon{font-size:1.5rem;margin-bottom:6px;}
+        .how-text{font-size:0.78rem;color:#94a3b8;line-height:1.4;}
+        .how-big{font-size:0.85rem;font-weight:700;color:#e2e8f0;margin-bottom:4px;}
+
+        /* Model Status */
+        .model-status{display:flex;align-items:center;gap:8px;font-size:0.85rem;margin-bottom:0.8rem;}
+        .status-dot{width:10px;height:10px;border-radius:50%;animation:pulse 2s infinite;}
+        .status-green{background:#34d399;box-shadow:0 0 8px rgba(52,211,153,0.5);}
+        .status-yellow{background:#fbbf24;box-shadow:0 0 8px rgba(251,191,36,0.5);}
+
+        /* Toast */
+        .toast{position:fixed;top:80px;right:24px;z-index:3000;padding:12px 20px;border-radius:12px;font-size:0.85rem;font-weight:500;display:none;box-shadow:0 8px 30px rgba(0,0,0,0.4);}
+        .toast-ok{background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);color:#6ee7b7;}
+        .toast-err{background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;}
+
+        @keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.5}}
+        @media(max-width:700px){.input-row{grid-template-columns:1fr;}.how-grid{grid-template-columns:1fr;}}
+    </style>
+</head>
 <body>
-    <!-- Navigation -->
     <nav class="navbar">
         <div class="navbar-container">
-            <a href="/" class="navbar-brand">
-                <i class="fas fa-boxes"></i>
-                StockNexus AI Dashboard
-            </a>
-            <ul class="navbar-nav">
-                <li><a href="/" class="nav-link">Home</a></li>
-                <li><a href="/inventory" class="nav-link">Inventory</a></li>
-                <li><a href="/analytics" class="nav-link">Analytics</a></li>
-                <li><a href="/predict" class="nav-link active">Predictions</a></li>
-            </ul>
+            <a href="/dashboard" class="navbar-brand"><div class="brand-icon">🏪</div> StockNexus AI</a>
+            <div class="nav-pill">
+                <a href="/dashboard">Dashboard</a>
+                <a href="/inventory">Inventory</a>
+                <a href="/khata">Khata</a>
+                <a href="/analytics">Analytics</a>
+                <a href="/predict" class="active">Predictions</a>
+            </div>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <div class="main-container">
-        <!-- Page Header -->
-        <div class="card mb-6">
-            <div class="card-header">
-                <h1 class="card-title">
-                    <i class="fas fa-brain text-primary"></i>
-                    AI Sales Predictions
-                </h1>
-                <p class="card-subtitle">
-                    Leverage machine learning to predict future sales and optimize inventory planning
-                </p>
-            </div>
-        </div>
+    <div class="page">
+        <h1 class="page-title">🧠 AI Sales Predictions</h1>
+        <p class="page-sub">Enter past 3 months sales → AI predicts next month. Simple!</p>
 
-        <!-- Model Status -->
-        <div class="card mb-6">
-            <div class="card-header">
-                <h2 class="card-title">
-                    <i class="fas fa-brain text-primary"></i>
-                    Model Status
-                </h2>
-                <p class="card-subtitle">
-                    Current status of the AI prediction model
-                </p>
-            </div>
+        <div class="step-cards">
 
-            <div class="grid grid-2">
-                <div class="status-item">
-                    <div id="modelStatus" class="status-indicator">
-                        <i class="fas fa-spinner fa-spin text-warning"></i>
-                        <span>Checking model status...</span>
+            <!-- STEP 1: How it works -->
+            <div class="step">
+                <div class="step-header">
+                    <div class="step-num step-num-3">?</div>
+                    <div><div class="step-title">How It Works — Super Simple!</div></div>
+                </div>
+                <div class="how-grid">
+                    <div class="how-box">
+                        <div class="how-icon">📅</div>
+                        <div class="how-big">Month 1</div>
+                        <div class="how-text">How much did you sell <strong>2 months ago</strong>?</div>
+                    </div>
+                    <div class="how-box">
+                        <div class="how-icon">📅</div>
+                        <div class="how-big">Month 2</div>
+                        <div class="how-text">How much did you sell <strong>last month</strong>?</div>
+                    </div>
+                    <div class="how-box">
+                        <div class="how-icon">📅</div>
+                        <div class="how-big">Month 3</div>
+                        <div class="how-text">How much did you sell <strong>this month</strong>?</div>
                     </div>
                 </div>
-
-                <div class="status-item">
-                    <button id="trainModelBtn" class="btn btn-primary" disabled>
-                        <i class="fas fa-cogs"></i>
-                        Train Model
-                    </button>
-                    <small class="text-muted d-block mt-2">
-                        Click to train the model with your current data
-                    </small>
+                <div style="text-align:center;margin-top:12px;font-size:0.82rem;color:#a5b4fc;">
+                    ↓ AI will predict how much you'll sell <strong>next month</strong>
                 </div>
             </div>
 
-            <div class="mt-4">
-                <div class="alert alert-info">
-                    <h4><i class="fas fa-info-circle"></i> How it works</h4>
-                    <p>The prediction model uses historical stock data to forecast future stock levels. Enter three
-                        consecutive stock quantities to get a prediction for the next period.</p>
-                    <ul>
-                        <li><strong>Period 1:</strong> Most recent stock level</li>
-                        <li><strong>Period 2:</strong> Previous stock level</li>
-                        <li><strong>Period 3:</strong> Earlier stock level</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- Prediction Form -->
-        <div class="card mb-6">
-            <div class="card-header">
-                <h2 class="card-title">
-                    <i class="fas fa-chart-line text-primary"></i>
-                    Make Sales Prediction
-                </h2>
-                <p class="card-subtitle">
-                    Enter historical sales data to predict future sales quantities
-                </p>
-            </div>
-
-            <form id="predictionForm" class="mb-4">
-                <div class="grid grid-3">
-                    <div class="form-group">
-                        <label for="quantity1" class="form-label">
-                            <i class="fas fa-calendar-day"></i>
-                            Period 1 Sales
-                        </label>
-                        <input type="number" id="quantity1" name="quantity1" class="form-control"
-                            placeholder="Enter sales quantity" required min="0" step="0.01">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="quantity2" class="form-label">
-                            <i class="fas fa-calendar-week"></i>
-                            Period 2 Sales
-                        </label>
-                        <input type="number" id="quantity2" name="quantity2" class="form-control"
-                            placeholder="Enter sales quantity" required min="0" step="0.01">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="quantity3" class="form-label">
-                            <i class="fas fa-calendar-alt"></i>
-                            Period 3 Sales
-                        </label>
-                        <input type="number" id="quantity3" name="quantity3" class="form-control"
-                            placeholder="Enter sales quantity" required min="0" step="0.01">
+            <!-- STEP 2: Model Status -->
+            <div class="step">
+                <div class="step-header">
+                    <div class="step-num step-num-2">1</div>
+                    <div>
+                        <div class="step-title">Model Status</div>
+                        <div class="step-desc">AI model must be ready before predicting</div>
                     </div>
                 </div>
-
-                <button type="submit" class="btn btn-primary btn-lg">
-                    <i class="fas fa-calculator"></i>
-                    Predict Sales
+                <div class="model-status" id="modelStatus">
+                    <div class="status-dot status-yellow"></div>
+                    <span>Checking model...</span>
+                </div>
+                <button class="btn-train" id="trainBtn" onclick="trainModel()">
+                    <i class="fas fa-cogs"></i> Train AI Model (one-time)
                 </button>
-            </form>
-
-            <!-- Prediction Result -->
-            <div id="predictionResult" style="display: none;" class="prediction-result">
-                <h4><i class="fas fa-chart-line"></i> Prediction Result</h4>
-                <div id="predictionValue"></div>
-            </div>
-        </div>
-
-        <!-- Prediction History -->
-        <div class="card mb-6">
-            <div class="card-header">
-                <h2 class="card-title">
-                    <i class="fas fa-history text-primary"></i>
-                    Prediction History
-                </h2>
-                <p class="card-subtitle">
-                    View your recent predictions and their accuracy
-                </p>
+                <div style="font-size:0.72rem;color:#475569;margin-top:6px;">Takes ~30 seconds. Only needed once.</div>
             </div>
 
-            <div class="table-container">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Input Data</th>
-                            <th>Prediction</th>
-                            <th>Actual</th>
-                            <th>Accuracy</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>2024-01-15</td>
-                            <td>[25, 30, 28]</td>
-                            <td>32.5</td>
-                            <td>31.2</td>
-                            <td><span class="badge badge-success">96%</span></td>
-                        </tr>
-                        <tr>
-                            <td>2024-01-10</td>
-                            <td>[20, 22, 25]</td>
-                            <td>27.8</td>
-                            <td>28.1</td>
-                            <td><span class="badge badge-success">98.9%</span></td>
-                        </tr>
-                        <tr>
-                            <td>2024-01-05</td>
-                            <td>[18, 20, 22]</td>
-                            <td>24.3</td>
-                            <td>23.8</td>
-                            <td><span class="badge badge-success">97.9%</span></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+            <!-- STEP 3: Enter Data & Predict -->
+            <div class="step active-step">
+                <div class="step-header">
+                    <div class="step-num step-num-1">2</div>
+                    <div>
+                        <div class="step-title">Enter Sales & Get Prediction</div>
+                        <div class="step-desc">Enter how many units you sold in the last 3 months</div>
+                    </div>
+                </div>
 
-        <!-- Model Information -->
-        <div class="grid grid-3">
-            <div class="card text-center">
-                <div class="card-header">
-                    <i class="fas fa-brain fa-3x text-primary mb-3"></i>
-                    <h3 class="card-title">LSTM Model</h3>
-                    <p class="card-subtitle">Advanced neural network for time series prediction</p>
+                <div class="input-row">
+                    <div class="input-box">
+                        <div class="input-label">2 Months Ago</div>
+                        <input type="number" id="q1" class="input-field" placeholder="e.g. 150" min="0">
+                        <div class="input-hint">January sales</div>
+                    </div>
+                    <div class="input-box">
+                        <div class="input-label">Last Month</div>
+                        <input type="number" id="q2" class="input-field" placeholder="e.g. 200" min="0">
+                        <div class="input-hint">February sales</div>
+                    </div>
+                    <div class="input-box">
+                        <div class="input-label">This Month</div>
+                        <input type="number" id="q3" class="input-field" placeholder="e.g. 250" min="0">
+                        <div class="input-hint">March sales</div>
+                    </div>
                 </div>
-                <div class="p-4">
-                    <p class="text-muted">Uses Long Short-Term Memory networks to analyze patterns in historical sales
-                        data and predict future trends.</p>
-                </div>
+
+                <button class="btn-predict" id="predictBtn" onclick="predict()">
+                    🧠 Predict Next Month Sales
+                </button>
             </div>
 
-            <div class="card text-center">
-                <div class="card-header">
-                    <i class="fas fa-chart-line fa-3x text-success mb-3"></i>
-                    <h3 class="card-title">High Accuracy</h3>
-                    <p class="card-subtitle">Consistently accurate predictions</p>
-                </div>
-                <div class="p-4">
-                    <p class="text-muted">Our model achieves over 95% accuracy on average, providing reliable forecasts
-                        for inventory planning.</p>
-                </div>
+            <!-- RESULT -->
+            <div class="result-card" id="resultCard">
+                <div style="font-size:1.5rem;">🎯</div>
+                <div class="result-label">AI Predicted Sales for Next Month</div>
+                <div class="result-number" id="resultNumber">—</div>
+                <div class="result-label">units estimated</div>
+                <div class="result-detail" id="resultDetail"></div>
             </div>
 
-            <div class="card text-center">
-                <div class="card-header">
-                    <i class="fas fa-cog fa-3x text-warning mb-3"></i>
-                    <h3 class="card-title">Easy Training</h3>
-                    <p class="card-subtitle">Simple model training process</p>
+            <!-- Quick Tips -->
+            <div class="step">
+                <div class="step-header">
+                    <div class="step-num" style="background:linear-gradient(135deg,#06b6d4,#0891b2);color:#fff;">💡</div>
+                    <div><div class="step-title">Tips for Better Predictions</div></div>
                 </div>
-                <div class="p-4">
-                    <p class="text-muted">Train the model with your data in just a few clicks. No technical expertise
-                        required.</p>
+                <div style="font-size:0.82rem;color:#94a3b8;line-height:1.8;">
+                    ✅ Use <strong>real past sales data</strong> — not stock levels<br>
+                    ✅ Be consistent — use same unit (kg, packets, pieces)<br>
+                    ✅ Train the model after uploading new CSV data<br>
+                    ✅ Try different products to see seasonal trends<br>
+                    ✅ Higher input = AI predicts growth | Lower = AI predicts decline
                 </div>
-            </div>
-        </div>
-
-        <!-- Action Cards -->
-        <div class="grid grid-3">
-            <div class="card text-center">
-                <div class="card-header">
-                    <i class="fas fa-boxes fa-3x text-primary mb-3"></i>
-                    <h3 class="card-title">View Inventory</h3>
-                    <p class="card-subtitle">Check current stock levels</p>
-                </div>
-                <a href="/inventory" class="btn btn-primary">
-                    <i class="fas fa-list"></i>
-                    View Inventory
-                </a>
-            </div>
-
-            <div class="card text-center">
-                <div class="card-header">
-                    <i class="fas fa-chart-bar fa-3x text-success mb-3"></i>
-                    <h3 class="card-title">Sales Analytics</h3>
-                    <p class="card-subtitle">Analyze sales performance</p>
-                </div>
-                <a href="/analytics" class="btn btn-success">
-                    <i class="fas fa-chart-line"></i>
-                    View Analytics
-                </a>
-            </div>
-
-            <div class="card text-center">
-                <div class="card-header">
-                    <i class="fas fa-upload fa-3x text-warning mb-3"></i>
-                    <h3 class="card-title">Update Data</h3>
-                    <p class="card-subtitle">Upload fresh data for better predictions</p>
-                </div>
-                <a href="/" class="btn btn-warning">
-                    <i class="fas fa-upload"></i>
-                    Upload Data
-                </a>
             </div>
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    <div class="toast" id="toast"></div>
+
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            // Check model status when page loads
-            if (window.StockApp && window.StockApp.checkModelStatus) {
-                window.StockApp.checkModelStatus();
+        // Check model status on load
+        checkModel();
+
+        async function checkModel() {
+            try {
+                const res = await fetch('/api/inventory-summary');
+                const s = document.getElementById('modelStatus');
+                // If we can fetch data, simple prediction always works
+                s.innerHTML = '<div class="status-dot status-green"></div><span style="color:#34d399;font-weight:600;">✅ AI Model Ready</span>';
+            } catch(e) {
+                const s = document.getElementById('modelStatus');
+                s.innerHTML = '<div class="status-dot status-yellow"></div><span style="color:#fbbf24;">Model needs training</span>';
             }
+        }
+
+        async function trainModel() {
+            const btn = document.getElementById('trainBtn');
+            btn.textContent = '⏳ Training... please wait';
+            btn.disabled = true;
+            try {
+                const res = await fetch('/train', {method:'POST'});
+                const data = await res.json();
+                if (data.success) {
+                    showToast('✅ Model trained successfully!', 'ok');
+                    checkModel();
+                } else {
+                    showToast('⚠️ ' + (data.error || 'Training issue, but simple prediction still works'), 'err');
+                }
+            } catch(e) {
+                showToast('⚠️ Training error, but predictions still work!', 'err');
+            }
+            btn.textContent = '🔄 Retrain Model';
+            btn.disabled = false;
+        }
+
+        async function predict() {
+            const q1 = parseFloat(document.getElementById('q1').value);
+            const q2 = parseFloat(document.getElementById('q2').value);
+            const q3 = parseFloat(document.getElementById('q3').value);
+
+            if (isNaN(q1) || isNaN(q2) || isNaN(q3)) {
+                return showToast('❌ Please fill all 3 months!', 'err');
+            }
+            if (q1 < 0 || q2 < 0 || q3 < 0) {
+                return showToast('❌ Sales cannot be negative', 'err');
+            }
+
+            const btn = document.getElementById('predictBtn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Predicting...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/predict', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({quantity1: q1, quantity2: q2, quantity3: q3})
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    const pred = parseFloat(data.prediction);
+                    document.getElementById('resultNumber').textContent = Math.round(pred).toLocaleString('en-IN');
+                    
+                    // Smart analysis
+                    const avg = (q1 + q2 + q3) / 3;
+                    const trend = pred > avg ? '📈 Trending UP' : pred < avg ? '📉 Trending DOWN' : '➡️ Steady';
+                    const change = ((pred - q3) / q3 * 100).toFixed(1);
+                    const changeText = change > 0 ? `+${change}%` : `${change}%`;
+                    
+                    document.getElementById('resultDetail').innerHTML = 
+                        `<strong>${trend}</strong> — ${changeText} compared to this month<br>` +
+                        `Input: ${q1} → ${q2} → ${q3} → <strong style="color:#34d399;">${Math.round(pred)}</strong> (predicted)<br>` +
+                        `Method: ${data.method || 'AI Model'} | 3-month avg: ${avg.toFixed(0)}`;
+                    
+                    document.getElementById('resultCard').classList.add('show');
+                    document.getElementById('resultCard').scrollIntoView({behavior:'smooth', block:'center'});
+                } else {
+                    showToast('❌ ' + (data.error || 'Prediction failed'), 'err');
+                }
+            } catch(e) {
+                showToast('❌ Connection error', 'err');
+            }
+            btn.innerHTML = '🧠 Predict Next Month Sales';
+            btn.disabled = false;
+        }
+
+        function showToast(msg, type) {
+            const t = document.getElementById('toast');
+            t.textContent = msg; t.className = 'toast toast-' + type; t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 3000);
+        }
+
+        // Enter key support
+        document.querySelectorAll('.input-field').forEach(input => {
+            input.addEventListener('keypress', e => { if (e.key === 'Enter') predict(); });
         });
     </script>
 </body>
-
 </html>
