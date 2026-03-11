@@ -156,28 +156,103 @@ def add_item():
 def inventory():
     """Display inventory with restocking and expiry recommendations"""
     try:
-        # Check if data file exists
-        if not os.path.exists(app.config['DATA_PATH']):
-            return render_template('error.html', 
-                                 error="Data file not found. Please upload a CSV file first.")
-        
-        # Read data from CSV file
-        df = pd.read_csv(app.config['DATA_PATH'])
-        
-        # Get recommendations for restocking and near expiry products
-        low_stock_recommendations = get_low_stock_products(df)
-        near_expiry_recommendations = get_near_expiry_products(df)
-        
+        # Get data from database (or CSV fallback)
+        df = db.get_all_items()
+
+        if df is None or df.empty:
+            return render_template('inventory.html',
+                                 restock_recommendations=[],
+                                 near_expiry_recommendations=[],
+                                 metrics=None,
+                                 all_items=[])
+
+        # Save to CSV for compatibility with utils
+        df_for_report = df.drop(columns=['created_at'], errors='ignore')
+        os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+        df_for_report.to_csv(app.config['DATA_PATH'], index=False)
+
+        # Get recommendations
+        low_stock_recommendations = get_low_stock_products(df_for_report)
+        near_expiry_recommendations = get_near_expiry_products(df_for_report)
+
         # Get inventory metrics
         from utils import calculate_inventory_metrics
-        metrics = calculate_inventory_metrics(df)
-        
-        return render_template('inventory.html', 
+        metrics = calculate_inventory_metrics(df_for_report)
+
+        # Build all_items list for the full table
+        all_items = []
+        for _, row in df_for_report.iterrows():
+            all_items.append({
+                'product_id': row.get('product_id', ''),
+                'product_name': row.get('product_name', ''),
+                'quantity_stock': row.get('quantity_stock', 0),
+                'minimum_stock_level': row.get('minimum_stock_level', 0),
+                'total_revenue': row.get('total_revenue', 0),
+                'expiry_date': row.get('expiry_date', ''),
+            })
+
+        return render_template('inventory.html',
                              restock_recommendations=low_stock_recommendations,
                              near_expiry_recommendations=near_expiry_recommendations,
-                             metrics=metrics)
+                             metrics=metrics,
+                             all_items=all_items)
     except Exception as e:
-        return render_template('error.html', error=f"Error loading inventory: {str(e)}")
+        print(f"Inventory page error: {e}")
+        return render_template('inventory.html',
+                             restock_recommendations=[],
+                             near_expiry_recommendations=[],
+                             metrics=None,
+                             all_items=[],
+                             error=str(e))
+
+@app.route('/api/delete_item', methods=['POST'])
+def api_delete_item():
+    """Delete an item by product_id"""
+    try:
+        data = request.get_json()
+        product_id = str(data.get('product_id', '')).strip()
+        if not product_id:
+            return jsonify({"success": False, "error": "No product_id provided"}), 400
+
+        deleted = False
+
+        # Try deleting from database
+        if db.use_db():
+            try:
+                conn = db.get_connection()
+                cur = conn.cursor()
+                cur.execute("DELETE FROM inventory WHERE product_id = %s;", (product_id,))
+                deleted = cur.rowcount > 0
+                conn.commit()
+                cur.close()
+                conn.close()
+                if deleted:
+                    print(f"✅ Deleted product {product_id} from DB")
+            except Exception as e:
+                print(f"❌ DB delete error: {e}")
+
+        # Also delete from CSV (fallback / sync)
+        csv_path = app.config['DATA_PATH']
+        if os.path.exists(csv_path):
+            try:
+                csv_df = pd.read_csv(csv_path)
+                before_count = len(csv_df)
+                csv_df = csv_df[csv_df['product_id'].astype(str) != product_id]
+                if len(csv_df) < before_count:
+                    csv_df.to_csv(csv_path, index=False)
+                    deleted = True
+                    print(f"✅ Deleted product {product_id} from CSV")
+            except Exception as e:
+                print(f"❌ CSV delete error: {e}")
+
+        if deleted:
+            return jsonify({"success": True, "message": f"Product {product_id} deleted!"})
+        else:
+            return jsonify({"success": False, "error": "Product not found"}), 404
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
 
 @app.route('/predict', methods=["GET", "POST"])
 def predict():

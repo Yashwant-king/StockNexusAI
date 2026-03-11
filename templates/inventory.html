@@ -1,229 +1,307 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inventory - StockNexus AI</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-</head>
+    <style>
+        body { background:#060818; background-image: radial-gradient(ellipse 80% 50% at 20% -10%, rgba(99,102,241,0.15) 0%, transparent 60%), radial-gradient(ellipse 60% 40% at 80% 110%, rgba(6,182,212,0.12) 0%, transparent 60%); background-attachment:fixed; }
+        .page-container { max-width:1400px; margin:0 auto; padding:2rem; }
+        .navbar { background:rgba(6,8,24,0.8); backdrop-filter:blur(20px); border-bottom:1px solid rgba(99,102,241,0.2); position:sticky; top:0; z-index:1000; }
+        .navbar-container { max-width:1400px; margin:0 auto; padding:0 2rem; height:68px; display:flex; justify-content:space-between; align-items:center; }
+        .navbar-brand { font-size:1.4rem; font-weight:800; color:#fff; text-decoration:none; display:flex; align-items:center; gap:0.6rem; }
+        .brand-icon { width:34px; height:34px; background:linear-gradient(135deg,#6366f1,#8b5cf6); border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; }
+        .nav-pill { display:flex; gap:4px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:12px; padding:4px; }
+        .nav-pill a { color:#94a3b8; text-decoration:none; font-size:0.82rem; font-weight:500; padding:6px 14px; border-radius:8px; transition:all 0.2s; }
+        .nav-pill a:hover, .nav-pill a.active { background:rgba(99,102,241,0.2); color:#a5b4fc; }
 
+        /* Page Header */
+        .page-header { margin-bottom:2rem; }
+        .page-title { font-size:2rem; font-weight:900; color:#fff; letter-spacing:-1px; margin-bottom:4px; }
+        .page-subtitle { color:#64748b; font-size:0.9rem; }
+
+        /* Stats Row */
+        .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:1rem; margin-bottom:2rem; }
+        .stat-box { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:14px; padding:1.2rem 1.4rem; }
+        .stat-box-number { font-size:1.8rem; font-weight:800; color:#fff; }
+        .stat-box-label { font-size:0.75rem; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-top:2px; }
+
+        /* Section Cards */
+        .section-card { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:18px; padding:1.5rem; margin-bottom:1.5rem; }
+        .section-title { font-size:1rem; font-weight:700; color:#e2e8f0; display:flex; align-items:center; gap:10px; margin-bottom:1rem; }
+        .section-title i { font-size:0.9rem; }
+
+        /* Table */
+        .inv-table { width:100%; border-collapse:separate; border-spacing:0; }
+        .inv-table thead th { background:rgba(99,102,241,0.1); color:#a5b4fc; font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; padding:10px 14px; text-align:left; border-bottom:1px solid rgba(99,102,241,0.2); }
+        .inv-table thead th:first-child { border-radius:10px 0 0 0; }
+        .inv-table thead th:last-child { border-radius:0 10px 0 0; }
+        .inv-table tbody tr { transition:background 0.15s; }
+        .inv-table tbody tr:hover { background:rgba(99,102,241,0.06); }
+        .inv-table tbody td { padding:10px 14px; font-size:0.85rem; color:#cbd5e1; border-bottom:1px solid rgba(255,255,255,0.04); }
+        .inv-table tbody td:first-child { font-weight:600; color:#a5b4fc; }
+
+        /* Badges */
+        .badge-ok { background:rgba(16,185,129,0.15); color:#34d399; padding:3px 10px; border-radius:8px; font-size:0.72rem; font-weight:600; }
+        .badge-warn { background:rgba(251,191,36,0.15); color:#fbbf24; padding:3px 10px; border-radius:8px; font-size:0.72rem; font-weight:600; }
+        .badge-danger { background:rgba(239,68,68,0.15); color:#fca5a5; padding:3px 10px; border-radius:8px; font-size:0.72rem; font-weight:600; }
+
+        /* Delete Button */
+        .btn-delete {
+            background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.25);
+            color:#f87171; border-radius:8px; padding:6px 12px; cursor:pointer;
+            font-size:0.78rem; font-weight:600; font-family:'Inter',sans-serif;
+            transition:all 0.2s; display:flex; align-items:center; gap:4px;
+        }
+        .btn-delete:hover { background:rgba(239,68,68,0.25); border-color:#f87171; color:#fca5a5; transform:translateY(-1px); }
+
+        /* Empty State */
+        .empty-state { text-align:center; padding:3rem; color:#64748b; }
+        .empty-state i { font-size:2.5rem; color:#334155; margin-bottom:1rem; display:block; }
+
+        /* Confirm Modal */
+        .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:2000; display:none; align-items:center; justify-content:center; }
+        .modal-overlay.show { display:flex; }
+        .modal-box { background:#1a1a2e; border:1px solid rgba(239,68,68,0.3); border-radius:20px; padding:2rem; width:380px; text-align:center; }
+        .modal-title { color:#f87171; font-size:1.1rem; font-weight:700; margin-bottom:8px; }
+        .modal-text { color:#94a3b8; font-size:0.88rem; margin-bottom:1.5rem; }
+        .modal-btns { display:flex; gap:10px; }
+        .modal-btn { flex:1; padding:10px; border-radius:10px; font-weight:600; font-size:0.88rem; cursor:pointer; font-family:'Inter',sans-serif; border:none; transition:all 0.2s; }
+        .modal-cancel { background:rgba(255,255,255,0.06); color:#94a3b8; border:1px solid rgba(255,255,255,0.1); }
+        .modal-cancel:hover { background:rgba(255,255,255,0.1); color:#e2e8f0; }
+        .modal-confirm { background:linear-gradient(135deg,#dc2626,#ef4444); color:#fff; box-shadow:0 4px 16px rgba(239,68,68,0.3); }
+        .modal-confirm:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(239,68,68,0.4); }
+
+        /* Toast */
+        .toast { position:fixed; top:80px; right:24px; z-index:3000; padding:12px 20px; border-radius:12px; font-size:0.85rem; font-weight:500; display:none; box-shadow:0 8px 30px rgba(0,0,0,0.4); }
+        .toast-success { background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); color:#6ee7b7; }
+        .toast-error { background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#fca5a5; }
+
+        .two-col { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-bottom:1.5rem; }
+        @media(max-width:900px) { .stats-row { grid-template-columns:repeat(2,1fr); } .two-col { grid-template-columns:1fr; } }
+    </style>
+</head>
 <body>
-    <!-- Navigation -->
+
+    <!-- NAVBAR -->
     <nav class="navbar">
         <div class="navbar-container">
-            <a href="/" class="navbar-brand">
-                <i class="fas fa-boxes"></i>
-                StockNexus AI Dashboard
-            </a>
-            <ul class="navbar-nav">
-                <li><a href="/" class="nav-link">Home</a></li>
-                <li><a href="/inventory" class="nav-link active">Inventory</a></li>
-                <li><a href="/analytics" class="nav-link">Analytics</a></li>
-                <li><a href="/predict" class="nav-link">Predictions</a></li>
-            </ul>
+            <a href="/dashboard" class="navbar-brand"><div class="brand-icon">🏪</div> StockNexus AI</a>
+            <div class="nav-pill">
+                <a href="/dashboard">Dashboard</a>
+                <a href="/inventory" class="active">Inventory</a>
+                <a href="/analytics">Analytics</a>
+                <a href="/predict">Predictions</a>
+            </div>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <div class="main-container">
-        <!-- Page Header -->
-        <div class="card mb-6">
-            <div class="card-header">
-                <h1 class="card-title">
-                    <i class="fas fa-boxes text-primary"></i>
-                    Inventory Management
-                </h1>
-                <p class="card-subtitle">
-                    Monitor stock levels, track expiry dates, and manage inventory efficiently
-                </p>
-            </div>
+    <div class="page-container">
+
+        <!-- Header -->
+        <div class="page-header">
+            <h1 class="page-title">📦 Inventory Management</h1>
+            <p class="page-subtitle">View all products, check stock levels, and remove items you no longer need.</p>
         </div>
 
-        <!-- Inventory Overview Stats -->
+        <!-- Stats -->
         {% if metrics %}
-        <div class="grid grid-4 mb-6">
-            <div class="stats-card">
-                <div class="stats-number">{{ metrics.total_products }}</div>
-                <div class="stats-label">Total Products</div>
+        <div class="stats-row">
+            <div class="stat-box">
+                <div class="stat-box-number">{{ metrics.total_products }}</div>
+                <div class="stat-box-label">Total Products</div>
             </div>
-            <div class="stats-card">
-                <div class="stats-number">{{ metrics.low_stock_count }}</div>
-                <div class="stats-label">Low Stock Items</div>
+            <div class="stat-box">
+                <div class="stat-box-number" style="color:#f87171;">{{ metrics.low_stock_count }}</div>
+                <div class="stat-box-label">Low Stock Alerts</div>
             </div>
-            <div class="stats-card">
-                <div class="stats-number">{{ "%.0f"|format(metrics.average_stock_level) }}</div>
-                <div class="stats-label">Avg Stock Level</div>
+            <div class="stat-box">
+                <div class="stat-box-number" style="color:#34d399;">₹{{ "%.0f"|format(metrics.total_stock_value) }}</div>
+                <div class="stat-box-label">Total Stock Value</div>
             </div>
-            <div class="stats-card">
-                <div class="stats-number">${{ "%.0f"|format(metrics.total_stock_value) }}</div>
-                <div class="stats-label">Total Stock Value</div>
+            <div class="stat-box">
+                <div class="stat-box-number">{{ "%.0f"|format(metrics.average_stock_level) }}</div>
+                <div class="stat-box-label">Avg Stock Level</div>
             </div>
         </div>
         {% endif %}
 
-        <!-- Inventory Sections -->
-        <div class="grid grid-2 mb-6">
-            <!-- Low Stock Products -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        <i class="fas fa-exclamation-triangle text-warning"></i>
-                        Low Stock Products
-                    </h2>
-                    <p class="card-subtitle">
-                        Products that need restocking (below 300 units)
-                    </p>
-                </div>
-
-                {% if restock_recommendations %}
-                <div class="table-container">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Product ID</th>
-                                <th>Product Name</th>
-                                <th>Current Stock</th>
-                                <th>Min Level</th>
-                                <th>Status</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for product in restock_recommendations %}
-                            <tr>
-                                <td>
-                                    <span class="badge badge-info">{{ product.product_id }}</span>
-                                </td>
-                                <td>
-                                    <strong>{{ product.product_name }}</strong>
-                                </td>
-                                <td>
-                                    <span class="text-danger font-weight-bold">{{ product.quantity_stock }}</span>
-                                </td>
-                                <td>{{ product.minimum_stock_level }}</td>
-                                <td>
-                                    <span class="badge badge-danger">Critical</span>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <div class="text-center p-6">
-                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-                    <h3 class="text-success">All Good!</h3>
-                    <p class="text-muted">No products are currently low on stock.</p>
-                </div>
-                {% endif %}
+        <!-- FULL INVENTORY TABLE -->
+        <div class="section-card">
+            <div class="section-title">
+                <i class="fas fa-th-list" style="color:#6366f1;"></i>
+                All Products
+                {% if all_items %}<span style="color:#64748b; font-weight:400; font-size:0.82rem; margin-left:8px;">({{ all_items|length }} items)</span>{% endif %}
             </div>
 
-            <!-- Near Expiry Products -->
-            <div class="card">
-                <div class="card-header">
-                    <h2 class="card-title">
-                        <i class="fas fa-clock text-danger"></i>
-                        Near Expiry Products
-                    </h2>
-                    <p class="card-subtitle">
-                        Products expiring within 7 days
-                    </p>
-                </div>
-
-                {% if near_expiry_recommendations %}
-                <div class="table-container">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Product ID</th>
-                                <th>Product Name</th>
-                                <th>Expiry Date</th>
-                                <th>Days Left</th>
-                                <th>Stock</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for product in near_expiry_recommendations %}
-                            <tr>
-                                <td>
-                                    <span class="badge badge-info">{{ product.product_id }}</span>
-                                </td>
-                                <td>
-                                    <strong>{{ product.product_name }}</strong>
-                                </td>
-                                <td>{{ product.expiry_date.strftime('%d/%m/%Y') if product.expiry_date else 'N/A' }}
-                                </td>
-                                <td>
-                                    {% if product.days_until_expiry <= 0 %} <span class="badge badge-danger">
-                                        Expired</span>
-                                        {% elif product.days_until_expiry <= 3 %} <span class="badge badge-danger">{{
-                                            product.days_until_expiry }} days</span>
-                                            {% else %}
-                                            <span class="badge badge-warning">{{ product.days_until_expiry }}
-                                                days</span>
-                                            {% endif %}
-                                </td>
-                                <td>{{ product.quantity_stock }}</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <div class="text-center p-6">
-                    <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
-                    <h3 class="text-success">No Expiry Issues!</h3>
-                    <p class="text-muted">No products are expiring soon.</p>
-                </div>
-                {% endif %}
+            {% if all_items and all_items|length > 0 %}
+            <div style="overflow-x:auto;">
+                <table class="inv-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Product Name</th>
+                            <th>Stock</th>
+                            <th>Min Level</th>
+                            <th>Status</th>
+                            <th>Revenue</th>
+                            <th>Expiry</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in all_items %}
+                        <tr id="row-{{ item.product_id }}">
+                            <td>{{ item.product_id }}</td>
+                            <td><strong style="color:#e2e8f0;">{{ item.product_name }}</strong></td>
+                            <td>{{ item.quantity_stock }}</td>
+                            <td>{{ item.minimum_stock_level }}</td>
+                            <td>
+                                {% if item.quantity_stock|int <= item.minimum_stock_level|int %}
+                                    <span class="badge-danger">⚠ Low</span>
+                                {% else %}
+                                    <span class="badge-ok">✓ OK</span>
+                                {% endif %}
+                            </td>
+                            <td>₹{{ "%.2f"|format(item.total_revenue|float) }}</td>
+                            <td>{{ item.expiry_date }}</td>
+                            <td>
+                                <button class="btn-delete" onclick="confirmDelete('{{ item.product_id }}', '{{ item.product_name }}')">
+                                    <i class="fas fa-trash-alt"></i> Delete
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-inbox"></i>
+                <p>No products yet. Go to <a href="/dashboard" style="color:#6366f1;">Dashboard</a> to add items.</p>
+            </div>
+            {% endif %}
         </div>
 
-        <!-- Action Cards -->
-        <div class="grid grid-3">
-            <div class="card text-center">
-                <div class="card-header">
-                    <i class="fas fa-upload fa-3x text-primary mb-3"></i>
-                    <h3 class="card-title">Upload New Data</h3>
-                    <p class="card-subtitle">Update your inventory with the latest data</p>
-                </div>
-                <a href="/" class="btn btn-primary">
-                    <i class="fas fa-upload"></i>
-                    Upload CSV
-                </a>
+        <!-- Low Stock & Near Expiry -->
+        <div class="two-col">
+            <!-- Low Stock -->
+            <div class="section-card">
+                <div class="section-title"><i class="fas fa-exclamation-triangle" style="color:#fbbf24;"></i> Low Stock Products</div>
+                {% if restock_recommendations %}
+                <table class="inv-table" style="font-size:0.82rem;">
+                    <thead><tr><th>ID</th><th>Name</th><th>Stock</th><th>Min</th></tr></thead>
+                    <tbody>
+                        {% for p in restock_recommendations %}
+                        <tr>
+                            <td>{{ p.product_id }}</td>
+                            <td>{{ p.product_name }}</td>
+                            <td style="color:#f87171; font-weight:700;">{{ p.quantity_stock }}</td>
+                            <td>{{ p.minimum_stock_level }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state" style="padding:1.5rem;"><i class="fas fa-check-circle" style="color:#34d399; font-size:1.5rem;"></i><p>All stock levels are healthy!</p></div>
+                {% endif %}
             </div>
 
-            <div class="card text-center">
-                <div class="card-header">
-                    <i class="fas fa-chart-bar fa-3x text-success mb-3"></i>
-                    <h3 class="card-title">View Analytics</h3>
-                    <p class="card-subtitle">Analyze sales trends and performance</p>
-                </div>
-                <a href="/analytics" class="btn btn-success">
-                    <i class="fas fa-chart-line"></i>
-                    View Analytics
-                </a>
-            </div>
-
-            <div class="card text-center">
-                <div class="card-header">
-                    <i class="fas fa-brain fa-3x text-warning mb-3"></i>
-                    <h3 class="card-title">Make Predictions</h3>
-                    <p class="card-subtitle">Use AI to predict future sales</p>
-                </div>
-                <a href="/predict" class="btn btn-warning">
-                    <i class="fas fa-calculator"></i>
-                    Predictions
-                </a>
+            <!-- Near Expiry -->
+            <div class="section-card">
+                <div class="section-title"><i class="fas fa-clock" style="color:#f87171;"></i> Near Expiry Products</div>
+                {% if near_expiry_recommendations %}
+                <table class="inv-table" style="font-size:0.82rem;">
+                    <thead><tr><th>ID</th><th>Name</th><th>Expiry</th><th>Days Left</th></tr></thead>
+                    <tbody>
+                        {% for p in near_expiry_recommendations %}
+                        <tr>
+                            <td>{{ p.product_id }}</td>
+                            <td>{{ p.product_name }}</td>
+                            <td>{{ p.expiry_date.strftime('%d/%m/%Y') if p.expiry_date else 'N/A' }}</td>
+                            <td>
+                                {% if p.days_until_expiry <= 0 %}<span class="badge-danger">Expired</span>
+                                {% elif p.days_until_expiry <= 3 %}<span class="badge-danger">{{ p.days_until_expiry }}d</span>
+                                {% else %}<span class="badge-warn">{{ p.days_until_expiry }}d</span>{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state" style="padding:1.5rem;"><i class="fas fa-check-circle" style="color:#34d399; font-size:1.5rem;"></i><p>No products expiring soon!</p></div>
+                {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
-</body>
+    <!-- DELETE CONFIRMATION MODAL -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal-box">
+            <div style="font-size:2.5rem; margin-bottom:1rem;">🗑️</div>
+            <div class="modal-title">Delete Product?</div>
+            <div class="modal-text">Are you sure you want to delete <strong id="deleteProductName"></strong>? This action cannot be undone.</div>
+            <div class="modal-btns">
+                <button class="modal-btn modal-cancel" onclick="closeDeleteModal()">Cancel</button>
+                <button class="modal-btn modal-confirm" id="confirmDeleteBtn">Yes, Delete</button>
+            </div>
+        </div>
+    </div>
 
+    <!-- TOAST -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        let deleteTargetId = '';
+
+        function confirmDelete(productId, productName) {
+            deleteTargetId = productId;
+            document.getElementById('deleteProductName').textContent = productName;
+            document.getElementById('deleteModal').classList.add('show');
+            document.getElementById('confirmDeleteBtn').onclick = () => executeDelete(productId);
+        }
+
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.remove('show');
+        }
+
+        async function executeDelete(productId) {
+            closeDeleteModal();
+            try {
+                const res = await fetch('/api/delete_item', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({product_id: productId})
+                });
+                const data = await res.json();
+                if (data.success) {
+                    // Fade out the row
+                    const row = document.getElementById('row-' + productId);
+                    if (row) {
+                        row.style.transition = 'opacity 0.3s, transform 0.3s';
+                        row.style.opacity = '0';
+                        row.style.transform = 'translateX(30px)';
+                        setTimeout(() => row.remove(), 300);
+                    }
+                    showToast('✅ ' + data.message, 'success');
+                } else {
+                    showToast('❌ ' + (data.error || 'Delete failed'), 'error');
+                }
+            } catch(e) {
+                showToast('❌ Connection error', 'error');
+            }
+        }
+
+        function showToast(msg, type) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = 'toast toast-' + type;
+            t.style.display = 'block';
+            setTimeout(() => { t.style.display = 'none'; }, 3000);
+        }
+    </script>
+</body>
 </html>
