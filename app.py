@@ -463,9 +463,9 @@ which items are profitable, and give smart business suggestions. Always be pract
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_message}
             ],
-            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            model="llama-3.3-70b-versatile",
             temperature=0.7,
-            max_tokens=500
+            max_tokens=600
         )
 
         ai_reply = chat_completion.choices[0].message.content
