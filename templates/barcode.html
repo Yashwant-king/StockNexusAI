@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barcode Generator — StockNexus AI</title>
+    <!-- Core Styling -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- JSBarcode -->
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --surface: #1e293b;
+            --surface-light: #334155;
+            --primary: #6366f1;
+            --primary-hover: #8b5cf6;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: rgba(255,255,255,0.08);
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter', sans-serif; background:var(--bg-color); color:var(--text); line-height:1.6; padding-bottom:100px; }
+
+        /* Navbar */
+        .navbar { background:rgba(15,23,42,0.8); backdrop-filter:blur(12px); border-bottom:1px solid var(--border); padding:0.8rem 2rem; position:sticky; top:0; z-index:1000; }
+        .navbar-container { max-width:1400px; margin:0 auto; display:flex; justify-content:space-between; align-items:center; }
+        .navbar-brand { font-size:1.4rem; font-weight:800; color:#fff; text-decoration:none; display:flex; align-items:center; gap:10px; background:linear-gradient(to right, #6366f1, #a855f7); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .brand-icon { width:32px; height:32px; background:linear-gradient(135deg, #6366f1, #8b5cf6); border-radius:8px; display:flex; align-items:center; justify-content:center; color:white; font-size:1.1rem; box-shadow:0 4px 10px rgba(99,102,241,0.3); }
+        .nav-pill { background:rgba(255,255,255,0.03); border:1px solid var(--border); padding:4px; border-radius:12px; display:flex; gap:4px; }
+        .nav-pill a { padding:8px 16px; border-radius:8px; text-decoration:none; color:var(--text-muted); font-size:0.9rem; font-weight:600; transition:all 0.2s; }
+        .nav-pill a:hover { color:#fff; background:rgba(255,255,255,0.05); }
+        .nav-pill a.active { background:var(--surface-light); color:#fff; box-shadow:0 2px 8px rgba(0,0,0,0.2); }
+
+        .page { max-width:1400px; margin:2rem auto; padding:0 2rem; }
+        .page-title { font-size:2rem; font-weight:800; margin-bottom:0.5rem; }
+        .page-sub { color:var(--text-muted); margin-bottom:2rem; }
+
+        .generator-grid {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+
+        .g-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .g-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #fff;
+            margin-bottom: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .f-group { margin-bottom: 1.2rem; }
+        .f-label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+        .f-control { 
+            width: 100%; 
+            background: rgba(0,0,0,0.2); 
+            border: 1px solid var(--border); 
+            border-radius: 10px; 
+            padding: 10px 14px; 
+            color: #fff; 
+            font-size: 0.95rem; 
+            font-family: 'Inter', sans-serif;
+            outline: none;
+            transition: all 0.2s;
+        }
+        .f-control:focus { border-color: var(--primary); box-shadow: 0 0 0 2px rgba(99,102,241,0.2); }
+        
+        .btn-primary {
+            width: 100%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 15px rgba(99,102,241,0.3);
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99,102,241,0.4); }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.05);
+            color: #e2e8f0;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .btn-secondary:hover { background: rgba(255,255,255,0.1); }
+
+        /* Print Container */
+        .print-preview {
+            background: #fff;
+            color: #000;
+            padding: 2cm;
+            border-radius: 8px;
+            min-height: 500px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+            align-content: start;
+        }
+
+        .sticker {
+            border: 1px dashed #ccc;
+            padding: 10px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+        }
+
+        .sticker-name { font-size: 12px; font-weight: bold; margin-bottom: 4px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .sticker-price { font-size: 14px; font-weight: 900; margin-top: 4px; }
+        .sticker svg { width: 100%; height: auto; max-height: 50px; }
+
+        @media print {
+            body { background: #fff !important; padding:0; }
+            .navbar, .g-card, .page-title, .page-sub, .no-print { display: none !important; }
+            .page { margin: 0; padding: 0; max-width: none; }
+            .generator-grid { display: block; }
+            .print-preview { 
+                box-shadow: none; 
+                padding: 0; 
+                min-height: auto; 
+                grid-template-columns: repeat(4, 1fr) !important; /* 4 columns for A4 */
+                gap: 5mm;
+            }
+            .sticker { border: 1px dotted #999; break-inside: avoid; }
+        }
+        
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="navbar-container">
+            <a href="/dashboard" class="navbar-brand"><div class="brand-icon">🏪</div> StockNexus AI</a>
+            <div class="nav-pill">
+                <a href="/dashboard">Dashboard</a>
+                <a href="/inventory">Inventory</a>
+                <a href="/bill">Billing</a>
+                <a href="/khata">Khata</a>
+                <a href="/analytics">Analytics</a>
+                <a href="/barcode" class="active">Barcodes</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="page">
+        <h1 class="page-title">🖨️ Barcode Label Generator</h1>
+        <p class="page-sub">Select inventory items and generate printable barcode sticker sheets for unbranded goods.</p>
+
+        <div class="generator-grid">
+            
+            <!-- Controls -->
+            <div class="g-card no-print">
+                <div class="g-title"><i class="fas fa-sliders-h"></i> Configuration</div>
+                
+                <div class="f-group">
+                    <label class="f-label">Select Product</label>
+                    <select id="productSelect" class="f-control" onchange="updatePreview()">
+                        <option value="">-- Choose a product --</option>
+                        {% for item in items %}
+                        <option value="{{ item.id }}" data-name="{{ item.name }}" data-price="{{ item.price }}">{{ item.name }} (₹{{ "%.0f"|format(item.price) }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="f-group">
+                    <label class="f-label">Or Custom Barcode Value</label>
+                    <input type="text" id="customBarcode" class="f-control" placeholder="E.g., 890123456789" oninput="document.getElementById('productSelect').value=''; updatePreview()">
+                </div>
+
+                <div class="f-group">
+                    <label class="f-label">Custom Product Name</label>
+                    <input type="text" id="customName" class="f-control" placeholder="E.g., Loose Toor Dal 1kg" oninput="updatePreview()">
+                </div>
+
+                <div class="f-group">
+                    <label class="f-label">Price (₹)</label>
+                    <input type="number" id="customPrice" class="f-control" placeholder="100" oninput="updatePreview()">
+                </div>
+
+                <div class="f-group">
+                    <label class="f-label">Number of Labels</label>
+                    <input type="number" id="labelCount" class="f-control" value="24" min="1" max="100" onchange="updatePreview()">
+                </div>
+
+                <button class="btn-primary" onclick="window.print()" style="margin-top:2rem;">
+                    <i class="fas fa-print"></i> Print Labels (A4 Sheet)
+                </button>
+            </div>
+
+            <!-- Preview -->
+            <div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;" class="no-print">
+                    <div style="font-weight:700;color:#e2e8f0;font-size:1.1rem;"><i class="fas fa-file-alt" style="color:#6366f1;"></i> Print Preview</div>
+                    <button class="btn-secondary" onclick="updatePreview()"><i class="fas fa-sync-alt"></i> Refresh</button>
+                </div>
+                
+                <div class="print-preview" id="previewArea">
+                    <div style="grid-column: 1 / -1; text-align:center; color:#666; padding-top:4rem;">
+                        <i class="fas fa-barcode" style="font-size:3rem; margin-bottom:1rem; opacity:0.3;"></i><br>
+                        Select a product to generate barcode stickers
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        function updatePreview() {
+            const select = document.getElementById('productSelect');
+            const customCode = document.getElementById('customBarcode').value.trim();
+            const customNameInput = document.getElementById('customName').value.trim();
+            const customPriceInput = document.getElementById('customPrice').value;
+            const count = parseInt(document.getElementById('labelCount').value) || 1;
+            
+            let name, price, barcodeValue;
+
+            if (customCode) {
+                barcodeValue = customCode;
+                name = customNameInput || 'Custom Product';
+                price = customPriceInput ? parseFloat(customPriceInput) : 0;
+            } else if (select.selectedIndex > 0) {
+                const option = select.options[select.selectedIndex];
+                barcodeValue = option.value;
+                name = customNameInput || option.dataset.name;
+                price = customPriceInput ? parseFloat(customPriceInput) : parseFloat(option.dataset.price);
+            } else {
+                document.getElementById('previewArea').innerHTML = `
+                    <div style="grid-column: 1 / -1; text-align:center; color:#666; padding-top:4rem;">
+                        <i class="fas fa-barcode" style="font-size:3rem; margin-bottom:1rem; opacity:0.3;"></i><br>
+                        Select a product to generate barcode stickers
+                    </div>`;
+                return;
+            }
+
+            const container = document.getElementById('previewArea');
+            container.innerHTML = '';
+
+            for (let i = 0; i < count; i++) {
+                const sticker = document.createElement('div');
+                sticker.className = 'sticker';
+                
+                const nameDiv = document.createElement('div');
+                nameDiv.className = 'sticker-name';
+                nameDiv.textContent = name;
+                
+                const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+                svg.id = `barcode-${i}`;
+                
+                const priceDiv = document.createElement('div');
+                priceDiv.className = 'sticker-price';
+                priceDiv.textContent = '₹' + price.toLocaleString('en-IN');
+
+                sticker.appendChild(nameDiv);
+                sticker.appendChild(svg);
+                sticker.appendChild(priceDiv);
+                container.appendChild(sticker);
+
+                // Try CODE128 first, fallback to simpler if long
+                try {
+                    JsBarcode(`#barcode-${i}`, barcodeValue, {
+                        format: "CODE128",
+                        width: 1.5,
+                        height: 40,
+                        displayValue: true,
+                        fontSize: 12,
+                        margin: 0
+                    });
+                } catch(e) {
+                    console.error("Barcode generation failed for:", barcodeValue);
+                }
+            }
+        }
+    </script>
+</body>
+</html>

@@ -525,6 +525,24 @@ def predict():
     elif request.method == "GET":
         return render_template("prediction.html")
 
+@app.route('/barcode')
+def barcode_generator():
+    """Render the printable barcode generator page"""
+    try:
+        items_df = db.get_all_items()
+        items = []
+        if items_df is not None and not items_df.empty:
+            for _, row in items_df.iterrows():
+                items.append({
+                    'id': str(row.get('product_id', '')),
+                    'name': str(row.get('product_name', '')),
+                    'price': float(row.get('total_revenue', 0))
+                })
+        return render_template('barcode.html', items=items)
+    except Exception as e:
+        print(f"Barcode page error: {e}")
+        return render_template('error.html', error=str(e))
+
 @app.route('/analytics')
 def sales_analytics():
     """Display sales analytics with improved error handling"""

@@ -36,14 +36,19 @@
 
         /* ===== HERO SECTION ===== */
         .hero-section {
-            text-align:center; padding:3.5rem 2rem 2rem;
-            max-width:1400px; margin:0 auto;
+            text-align:center; padding:5rem 2rem 4rem;
+            max-width:1400px; margin:2rem auto;
+            border-radius:24px;
+            background: linear-gradient(180deg, rgba(6,8,24,0.1) 0%, #060818 100%), url("{{ url_for('static', filename='images/dashboard_hero.png') }}") no-repeat center center;
+            background-size: cover;
+            border: 1px solid rgba(99,102,241,0.2);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
         }
-        .hero-badge { display:inline-flex; align-items:center; gap:6px; background:rgba(99,102,241,0.12); border:1px solid rgba(99,102,241,0.3); color:#a5b4fc; padding:6px 16px; border-radius:20px; font-size:0.78rem; font-weight:600; margin-bottom:1.2rem; letter-spacing:0.5px; text-transform:uppercase; }
+        .hero-badge { display:inline-flex; align-items:center; gap:6px; background:rgba(6,8,24,0.8); border:1px solid rgba(99,102,241,0.5); color:#a5b4fc; padding:6px 16px; border-radius:20px; font-size:0.78rem; font-weight:600; margin-bottom:1.2rem; letter-spacing:0.5px; text-transform:uppercase; backdrop-filter:blur(10px); }
         .hero-badge-dot { width:6px; height:6px; background:#6366f1; border-radius:50%; animation:pulse-dot 2s infinite; }
         @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1);} 50%{opacity:0.5;transform:scale(0.8);} }
-        .hero-title { font-size:3rem; font-weight:900; letter-spacing:-2px; line-height:1.1; margin-bottom:1rem; background:linear-gradient(135deg,#fff 30%,#a5b4fc 70%,#67e8f9 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
-        .hero-subtitle { color:#64748b; font-size:1rem; max-width:500px; margin:0 auto 0.5rem; }
+        .hero-title { font-size:3.5rem; font-weight:900; letter-spacing:-2px; line-height:1.1; margin-bottom:1rem; background:linear-gradient(135deg,#ffffff 30%,#a5b4fc 70%,#67e8f9 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; text-shadow:0 4px 20px rgba(0,0,0,0.8); }
+        .hero-subtitle { color:#cbd5e1; font-size:1.1rem; max-width:600px; margin:0 auto 0.5rem; text-shadow:0 2px 10px rgba(0,0,0,0.8); }
 
         /* ===== LAST UPDATED ===== */
         #lastUpdatedBanner { text-align:center; margin:0.75rem auto 1.5rem; }
@@ -185,14 +190,16 @@
         /* ===== CHAT BUTTON ===== */
         #chatToggleBtn {
             position:fixed; bottom:28px; right:28px; z-index:1001;
-            width:56px; height:56px; border-radius:50%; border:none;
-            background:linear-gradient(135deg,#6366f1,#8b5cf6);
-            color:#fff; font-size:22px; cursor:pointer;
-            box-shadow:0 4px 24px rgba(99,102,241,0.5);
-            display:flex; align-items:center; justify-content:center;
+            width:64px; height:64px; border-radius:50%; border:none;
+            background:url("{{ url_for('static', filename='images/ai_mascot.png') }}") no-repeat center center;
+            background-size: cover;
+            background-color: #0f172a;
+            color:transparent; cursor:pointer;
+            box-shadow:0 8px 30px rgba(99,102,241,0.6);
+            border: 2px solid #8b5cf6;
             transition:all 0.3s;
         }
-        #chatToggleBtn:hover { transform:scale(1.1); box-shadow:0 6px 32px rgba(99,102,241,0.6); }
+        #chatToggleBtn:hover { transform:scale(1.1) translateY(-5px); box-shadow:0 12px 40px rgba(99,102,241,0.8); }
 
         /* ===== CHAT PANEL ===== */
         #chatPanel {
@@ -504,6 +511,8 @@
             <button onclick="startVoiceCommand()" id="voiceBtn" class="action-btn" style="color:#f97316; border-color:rgba(249,115,22,0.3);"><i class="fas fa-microphone"></i> Voice</button>
             <button onclick="sendDailyReport()" class="action-btn" style="color:#34d399; border-color:rgba(52,211,153,0.3);"><i class="fas fa-paper-plane"></i> Daily Report</button>
             <button onclick="loadDiscounts()" class="action-btn" style="color:#fbbf24; border-color:rgba(251,191,36,0.3);"><i class="fas fa-tags"></i> Discounts</button>
+            <a href="/purchase-order" class="action-btn" style="color:#f472b6; border-color:rgba(244,114,182,0.3);"><i class="fas fa-file-invoice"></i> Purchase Order</a>
+            <button onclick="showBusinessCard()" class="action-btn" style="color:#0ea5e9; border-color:rgba(14,165,233,0.3);"><i class="fas fa-id-card"></i> Share Shop</button>
         </div>
     </div>
 
@@ -525,6 +534,37 @@
 
     <!-- AI CHAT BUTTON -->
     <button id="chatToggleBtn" onclick="toggleChat()">🤖</button>
+
+    <!-- DIGITAL BUSINESS CARD MODAL -->
+    <div id="bizCardModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;align-items:center;justify-content:center;backdrop-filter:blur(5px);">
+        <div style="background:#1e293b;border:1px solid rgba(14,165,233,0.4);border-radius:20px;padding:2rem;width:90%;max-width:400px;text-align:center;position:relative;box-shadow:0 15px 50px rgba(0,0,0,0.5);">
+            <button onclick="document.getElementById('bizCardModal').style.display='none'" style="position:absolute;top:15px;right:15px;background:none;border:none;color:#94a3b8;font-size:1.5rem;cursor:pointer;">&times;</button>
+            
+            <div id="bizCardPreview" style="background:linear-gradient(135deg, #0f172a, #1e293b);border-radius:15px;padding:2rem 1rem;position:relative;overflow:hidden;border:1px solid rgba(255,255,255,0.1);margin-bottom:1.5rem;">
+                <div style="width:100px;height:100px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:3rem;margin:0 auto 1rem;box-shadow:0 0 20px rgba(99,102,241,0.5);">🏪</div>
+                <h2 id="storeName" style="color:#fff;font-weight:800;font-size:1.8rem;margin-bottom:0.5rem;letter-spacing:1px;">My Kirana Hub</h2>
+                <div style="color:#10b981;font-weight:600;font-size:0.9rem;margin-bottom:1.5rem;"><i class="fas fa-check-circle"></i> Digital Dukaan Partner</div>
+                
+                <div style="background:rgba(255,255,255,0.05);border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px;justify-content:center;border:1px solid rgba(255,255,255,0.1);">
+                    <i class="fas fa-link" style="color:#0ea5e9;"></i>
+                    <span style="color:#94a3b8;font-size:0.85rem;">stocknexusai-2.onrender.com/dukaan</span>
+                </div>
+                
+                <!-- Decorative geometry -->
+                <div style="position:absolute;top:-50px;right:-50px;width:150px;height:150px;background:radial-gradient(circle, rgba(14,165,233,0.1) 0%, transparent 70%);border-radius:50%;"></div>
+                <div style="position:absolute;bottom:-50px;left:-50px;width:150px;height:150px;background:radial-gradient(circle, rgba(99,102,241,0.1) 0%, transparent 70%);border-radius:50%;"></div>
+            </div>
+
+            <div class="f-group" style="text-align:left;">
+                <label style="display:block;color:#94a3b8;font-size:0.85rem;margin-bottom:8px;font-weight:600;">Store Name</label>
+                <input type="text" id="bcStoreName" value="My Kirana Hub" oninput="document.getElementById('storeName').textContent = this.value" style="width:100%;padding:10px;background:rgba(0,0,0,0.3);border:1px solid rgba(255,255,255,0.1);border-radius:8px;color:#fff;outline:none;">
+            </div>
+
+            <button onclick="shareBizCard()" style="width:100%;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;border:none;padding:14px;border-radius:12px;font-size:1rem;font-weight:700;display:flex;justify-content:center;align-items:center;gap:10px;margin-top:1rem;cursor:pointer;transition:transform 0.2s;box-shadow:0 5px 15px rgba(37,211,102,0.3);">
+                <i class="fab fa-whatsapp" style="font-size:1.2rem;"></i> Share on WhatsApp
+            </button>
+        </div>
+    </div>
 
     <!-- AI CHAT PANEL -->
     <div id="chatPanel">
@@ -552,6 +592,16 @@
 
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     <script>
+        function showBusinessCard() {
+            document.getElementById('bizCardModal').style.display = 'flex';
+        }
+
+        function shareBizCard() {
+            const name = document.getElementById('bcStoreName').value;
+            const text = `🏪 *${name}* is now Online! 🚀\n\nOrder groceries online directly from our Digital Dukaan:\n🌐 https://stocknexusai-2.onrender.com/dukaan\n\n✅ Live Inventory\n✅ Easy Ordering\n✅ Home Delivery Available\n\nTap the link to order now! 🛒`;
+            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+        }
+
         function previewFile(input) {
             const name = input.files[0]?.name || '';
             document.getElementById('filePreviewName').textContent = name ? '✅ ' + name + ' selected' : '';

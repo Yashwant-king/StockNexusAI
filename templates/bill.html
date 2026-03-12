@@ -156,9 +156,38 @@
                 </div>
 
                 <div class="bill-total">
+                    <!-- GST Toggle -->
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;padding:8px 12px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:10px;">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <i class="fas fa-file-invoice" style="color:#a5b4fc;"></i>
+                            <span style="font-size:0.82rem;font-weight:600;color:#a5b4fc;">GST Invoice</span>
+                        </div>
+                        <label style="position:relative;display:inline-block;width:40px;height:22px;cursor:pointer;">
+                            <input type="checkbox" id="gstToggle" onchange="renderBill()" style="opacity:0;width:0;height:0;">
+                            <span style="position:absolute;inset:0;background:rgba(255,255,255,0.1);border-radius:22px;transition:0.3s;" id="gstSlider"></span>
+                        </label>
+                    </div>
+                    <div id="gstInputRow" style="display:none;margin-bottom:10px;">
+                        <input type="text" id="gstinInput" placeholder="GSTIN (e.g. 27AABCU9603R1ZM)" style="width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:8px 12px;color:#e2e8f0;font-size:0.78rem;font-family:'Inter',sans-serif;outline:none;" oninput="renderBill()">
+                    </div>
+
                     <div class="b-row" style="color:#94a3b8;">
                         <span>Items:</span>
                         <span id="totalItems">0</span>
+                    </div>
+                    <div class="b-row" style="color:#94a3b8;">
+                        <span>Subtotal:</span>
+                        <span>₹<span id="subtotalAmount">0</span></span>
+                    </div>
+                    <div id="gstBreakdown" style="display:none;">
+                        <div class="b-row" style="color:#67e8f9;font-size:0.82rem;">
+                            <span>CGST (9%):</span>
+                            <span>₹<span id="cgstAmount">0</span></span>
+                        </div>
+                        <div class="b-row" style="color:#67e8f9;font-size:0.82rem;">
+                            <span>SGST (9%):</span>
+                            <span>₹<span id="sgstAmount">0</span></span>
+                        </div>
                     </div>
                     <div class="b-row b-bold">
                         <span>Total:</span>
@@ -215,22 +244,34 @@
         function sendWhatsApp() {
             const itemIds = Object.keys(bill);
             if (itemIds.length === 0) { alert("Bill is empty. Add products first."); return; }
+            const gstOn = document.getElementById('gstToggle').checked;
+            const gstin = document.getElementById('gstinInput').value.trim();
             
-            let text = "🏪 *Kirana Store Bill*\n---------------------\n";
-            let totalAmt = 0;
+            let text = "🏪 *Kirana Store " + (gstOn ? "GST " : "") + "Invoice*\n";
+            text += new Date().toLocaleString() + "\n";
+            if (gstOn && gstin) text += `GSTIN: ${gstin}\n`;
+            text += "---------------------\n";
+            let subtotal = 0;
             itemIds.forEach(id => {
                 const item = bill[id];
                 const lineTotal = item.price * item.qty;
-                totalAmt += lineTotal;
+                subtotal += lineTotal;
                 text += `> ${item.name} x${item.qty} = ₹${Math.round(lineTotal)}\n`;
             });
             text += "---------------------\n";
-            text += `*Total: ₹${Math.round(totalAmt)}*\n`;
+            text += `Subtotal: ₹${Math.round(subtotal)}\n`;
+            if (gstOn) {
+                const cgst = Math.round(subtotal * 0.09);
+                const sgst = Math.round(subtotal * 0.09);
+                text += `CGST (9%): ₹${cgst}\nSGST (9%): ₹${sgst}\n`;
+                text += `*Grand Total: ₹${Math.round(subtotal + cgst + sgst)}*\n`;
+            } else {
+                text += `*Total: ₹${Math.round(subtotal)}*\n`;
+            }
             text += "\nThank you for shopping with us! 🙏";
             
             const phone = prompt("Enter customer's 10-digit WhatsApp number:");
             if (phone && phone.length >= 10) {
-                // Formatting mobile for WhatsApp URL
                 const formattedPhone = "91" + phone.replace(/[^0-9]/g, "").slice(-10);
                 window.open(`https://wa.me/${formattedPhone}?text=${encodeURIComponent(text)}`, "_blank");
             }
@@ -239,23 +280,37 @@
         function renderBill() {
             const container = document.getElementById('billItems');
             const itemIds = Object.keys(bill);
+            const gstOn = document.getElementById('gstToggle').checked;
+
+            // Toggle GST UI
+            document.getElementById('gstBreakdown').style.display = gstOn ? 'block' : 'none';
+            document.getElementById('gstInputRow').style.display = gstOn ? 'block' : 'none';
+            const slider = document.getElementById('gstSlider');
+            slider.style.background = gstOn ? '#6366f1' : 'rgba(255,255,255,0.1)';
+            slider.innerHTML = gstOn
+                ? '<span style="position:absolute;right:3px;top:3px;width:16px;height:16px;background:#fff;border-radius:50%;transition:0.3s;"></span>'
+                : '<span style="position:absolute;left:3px;top:3px;width:16px;height:16px;background:#94a3b8;border-radius:50%;transition:0.3s;"></span>';
             
             if (itemIds.length === 0) {
                 container.innerHTML = '<div class="empty-bill">Bill is empty.<br>Tap products to add them here.</div>';
                 document.getElementById('totalItems').textContent = '0';
+                document.getElementById('subtotalAmount').textContent = '0';
                 document.getElementById('totalAmount').textContent = '0';
+                document.getElementById('earnedPoints').textContent = '0';
+                document.getElementById('cgstAmount').textContent = '0';
+                document.getElementById('sgstAmount').textContent = '0';
                 return;
             }
 
             let html = '';
             let totalQty = 0;
-            let totalAmt = 0;
+            let subtotal = 0;
 
             itemIds.forEach(id => {
                 const item = bill[id];
                 const lineTotal = item.price * item.qty;
                 totalQty += item.qty;
-                totalAmt += lineTotal;
+                subtotal += lineTotal;
 
                 html += `
                 <div class="bill-item">
@@ -272,9 +327,20 @@
 
             container.innerHTML = html;
             document.getElementById('totalItems').textContent = totalQty;
+            document.getElementById('subtotalAmount').textContent = Math.round(subtotal).toLocaleString('en-IN');
+
+            // GST Calculation
+            let cgst = 0, sgst = 0, grandTotal = subtotal;
+            if (gstOn) {
+                cgst = subtotal * 0.09;
+                sgst = subtotal * 0.09;
+                grandTotal = subtotal + cgst + sgst;
+            }
+            document.getElementById('cgstAmount').textContent = Math.round(cgst).toLocaleString('en-IN');
+            document.getElementById('sgstAmount').textContent = Math.round(sgst).toLocaleString('en-IN');
             
             // Deduct redeemed points from total UI
-            let finalP = Math.round(totalAmt) - redeemedPoints;
+            let finalP = Math.round(grandTotal) - redeemedPoints;
             if(finalP < 0) finalP = 0;
             
             document.getElementById('totalAmount').textContent = finalP.toLocaleString('en-IN');
@@ -406,7 +472,8 @@ Or use this link: upi://pay?pa=${upiId}&am=${amount}&cu=INR`;
     <!-- UPI MODAL -->
     <div class="upi-modal-bg" id="upiModalBg" onclick="if(event.target===this) this.classList.remove('show')">
         <div class="upi-modal">
-            <div style="font-size:1.5rem; margin-bottom:0.5rem;">💳 UPI Payment</div>
+            <img src="{{ url_for('static', filename='images/upi_illustration.png') }}" alt="UPI Payment" style="width:100px;height:100px;margin:0 auto 10px;display:block;border-radius:16px;">
+            <div style="font-size:1.5rem; margin-bottom:0.5rem; font-weight:800; background:linear-gradient(135deg,#34d399,#10b981); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;">UPI Payment</div>
             <div style="color:#64748b; font-size:0.85rem; margin-bottom:1rem;">Scan QR or share link with customer</div>
             <div class="upi-amount">₹<span id="upiAmount">0</span></div>
             

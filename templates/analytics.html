@@ -125,32 +125,38 @@
                 </div>
             </div>
             <div class="g-card">
-                <div class="g-title">💡 Key Insights</div>
+                <div class="g-title">💡 Profit & Loss Summary</div>
                 <div class="insight-chips">
-                    <div class="chip">
-                        <span class="chip-icon">📈</span>
-                        <span>Total revenue of ₹{{ "%.0f"|format(total_sales) }} across all products</span>
+                    <div class="chip" style="border-color:rgba(16,185,129,0.3);">
+                        <span class="chip-icon">💰</span>
+                        <span>Total Revenue: <strong style="color:#34d399;">₹{{ "%.0f"|format(total_sales) }}</strong></span>
                     </div>
-                    <div class="chip">
-                        <span class="chip-icon">💵</span>
-                        <span>Average ₹{{ "%.0f"|format(average_order_value) }} revenue per product</span>
+                    <div class="chip" style="border-color:rgba(239,68,68,0.3);">
+                        <span class="chip-icon">💸</span>
+                        <span>Total Expenses: <strong style="color:#fca5a5;">₹{{ "%.0f"|format(total_expenses) }}</strong></span>
+                    </div>
+                    <div class="chip" style="border-color:{% if net_profit >= 0 %}rgba(16,185,129,0.4){% else %}rgba(239,68,68,0.4){% endif %}; background:{% if net_profit >= 0 %}rgba(16,185,129,0.08){% else %}rgba(239,68,68,0.08){% endif %};">
+                        <span class="chip-icon">{% if net_profit >= 0 %}📈{% else %}📉{% endif %}</span>
+                        <span>Net {{ "Profit" if net_profit >= 0 else "Loss" }}: <strong style="color:{% if net_profit >= 0 %}#6ee7b7{% else %}#f87171{% endif %};">₹{{ "%.0f"|format(net_profit|abs) }}</strong>
+                        {% if total_sales > 0 %} <span style="font-size:0.72rem;color:#94a3b8;margin-left:4px;">({{ "%.1f"|format((net_profit / total_sales) * 100) }}% margin)</span>{% endif %}
+                        </span>
                     </div>
                     {% if top_selling_products %}
                     <div class="chip">
                         <span class="chip-icon">🥇</span>
-                        <span>Highest stock: {{ top_selling_products[0].product_name }} ({{ top_selling_products[0].quantity_stock }} units)</span>
+                        <span>Top earner: {{ top_selling_products[0].product_name }} — ₹{{ "%.0f"|format(top_selling_products[0].total_revenue) }}</span>
                     </div>
                     {% endif %}
                     {% if bottom_selling_products %}
                     <div class="chip">
                         <span class="chip-icon">🚨</span>
-                        <span>Lowest stock: {{ bottom_selling_products[0].product_name }} ({{ bottom_selling_products[0].quantity_stock }} units) — reorder soon!</span>
+                        <span>Low stock alert: {{ bottom_selling_products[0].product_name }} ({{ bottom_selling_products[0].quantity_stock }} units)</span>
                     </div>
                     {% endif %}
-                    <div class="chip">
-                        <span class="chip-icon">💰</span>
-                        <span>Estimated profit: ₹{{ "%.0f"|format(total_sales * 0.28) }} (28% margin)</span>
-                    </div>
+                </div>
+                <!-- Profit vs Expense Mini Chart -->
+                <div style="margin-top:1rem;height:180px;">
+                    <canvas id="profitChart"></canvas>
                 </div>
             </div>
         </div>
@@ -257,6 +263,29 @@
                     responsive: true, maintainAspectRatio: false,
                     plugins: { legend: { position: 'right', labels: { color: '#94a3b8', font: { size: 11 }, padding: 8 } } },
                     cutout: '60%',
+                }
+            });
+
+            // Profit vs Expenses Chart
+            new Chart(document.getElementById('profitChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: ['Revenue', 'Expenses', 'Net Profit'],
+                    datasets: [{
+                        data: [{{ "%.0f"|format(total_sales) }}, {{ "%.0f"|format(total_expenses) }}, {{ "%.0f"|format(net_profit) }}],
+                        backgroundColor: ['rgba(16,185,129,0.6)', 'rgba(239,68,68,0.6)', {{ 'true' if net_profit >= 0 else 'false' }} ? 'rgba(99,102,241,0.6)' : 'rgba(251,191,36,0.6)'],
+                        borderRadius: 8,
+                        borderSkipped: false,
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', callback: v => '₹' + v.toLocaleString() } },
+                        y: { grid: { display: false }, ticks: { color: '#e2e8f0', font: { weight: '600' } } }
+                    }
                 }
             });
         });
