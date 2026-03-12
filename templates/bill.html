@@ -326,7 +326,22 @@
                 });
                 const data = await res.json();
                 if(data.success) {
-                    alert(`✅ Super! Checkout Complete.\nStock has been deducted from the database.\nCustomer earned +${data.points_earned} points!\n\nNote: Reload the page to see updated stock.`);
+                    const sendReceipt = confirm(`✅ Super! Checkout Complete.\\n\\nCustomer earned +${data.points_earned} points!\\n\\nDo you want to send a Digital Receipt to the customer on WhatsApp?`);
+                    
+                    if (sendReceipt && currentCustomerPhone) {
+                        const formatted = '91' + currentCustomerPhone.replace(/\D/g, '').slice(-10);
+                        let receiptText = "🧾 *KIRANA STORE RECEIPT* 🧾\\n-----------------------------\\n";
+                        Object.values(bill).forEach(item => {
+                            receiptText += `${item.name} x ${item.qty} = ₹${Math.round(item.qty * item.price)}\\n`;
+                        });
+                        receiptText += "-----------------------------\\n";
+                        receiptText += `*Total Bill: ₹${data.final_bill}*\\n`;
+                        receiptText += `Points Earned: ${data.points_earned}\\n`;
+                        receiptText += "\\nThank you for shopping with us! 🙏\\nVisit again!";
+                        
+                        window.open(`https://wa.me/${formatted}?text=${encodeURIComponent(receiptText)}`, '_blank');
+                    }
+                    
                     clearBill();
                 } else {
                     alert('Error: ' + data.error);

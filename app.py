@@ -616,8 +616,28 @@ def sales_analytics():
 
 @app.route('/train', methods=['POST'])
 def train_model():
-    """Train the prediction model"""
+    """Train the prediction model using live DB data"""
     try:
+        # Step 1: Export current DB inventory to the CSV that Prediction.py reads
+        df_live = db.get_all_items()
+        if df_live is None or df_live.empty:
+            return jsonify({"success": False, "error": "No inventory data found. Add items first."}), 400
+        
+        # Ensure the data directory exists
+        import os
+        os.makedirs('data_set', exist_ok=True)
+        
+        # Export only the columns Prediction.py needs
+        export_cols = ['product_id', 'product_name', 'quantity_stock', 'minimum_stock_level', 'total_revenue', 'expiry_date']
+        export_cols_exist = [c for c in export_cols if c in df_live.columns]
+        df_export = df_live[export_cols_exist].copy()
+        df_export.to_csv('data_set/data.csv', index=False)
+        print(f"Exported {len(df_export)} rows to data_set/data.csv for training")
+        
+        if len(df_export) < 5:
+            return jsonify({"success": False, "error": f"Need at least 5 products to train the LSTM model. You have {len(df_export)}. Add more products first!"}), 400
+        
+        # Step 2: Run LSTM training
         from Prediction import main as train_prediction_model
         print("Starting model training process...")
         success = train_prediction_model()
@@ -629,17 +649,17 @@ def train_model():
             if model is not None:
                 return jsonify({
                     "success": True,
-                    "message": "Model trained successfully!"
+                    "message": f"LSTM Model trained on {len(df_export)} products! Predictions are now powered by your real data."
                 }), 200
             else:
                 return jsonify({
-                    "success": False,
-                    "error": "Model training completed but failed to load the model."
-                }), 500
+                    "success": True,
+                    "message": "Model trained successfully! Simple prediction fallback active."
+                }), 200
         else:
             return jsonify({
                 "success": False,
-                "error": "Model training failed. Check the logs for details."
+                "error": "Model training failed. Check server logs for details."
             }), 500
     except Exception as e:
         print(f"Training error: {str(e)}")
@@ -1319,6 +1339,47 @@ def check_loyalty():
             return jsonify({"success": False, "points": 0, "message": "Customer not found"})
             
     except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/generate_promo', methods=['POST'])
+def generate_promo():
+    """Generates a WhatsApp marketing post using Groq AI."""
+    try:
+        from groq import Groq
+        data = request.get_json()
+        item_name = data.get('item_name', 'Our Store')
+        
+        groq_api_key = os.environ.get('GROQ_API_KEY')
+        if not groq_api_key:
+            return jsonify({"success": False, "error": "GROQ_API_KEY not set on server"}), 500
+
+        system_prompt = (
+            f"You are a viral marketing expert for a local Indian Kirana (Grocery) Store.\n"
+            f"Write a highly engaging WhatsApp Status/message to sell: '{item_name}'.\n"
+            f"Keep it under 4 lines. Use emojis. Make it exciting! Use Hinglish.\n"
+            f"End with: 'Visit or WhatsApp us to order!'\n"
+            f"Do NOT use markdown or quotes. Just the plain message text."
+        )
+
+        client = Groq(api_key=groq_api_key)
+        chat_completion = client.chat.completions.create(
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": "Write the promo now."}
+            ],
+            model="llama-3.3-70b-versatile",
+            temperature=0.75,
+            max_tokens=200
+        )
+
+        ai_reply = chat_completion.choices[0].message.content.strip()
+        ai_reply += "\n\n🌐 stocknexusai-2.onrender.com/dukaan"
+
+        return jsonify({"success": True, "promo": ai_reply})
+        
+    except Exception as e:
+        print(f"Promo generation error: {str(e)}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 

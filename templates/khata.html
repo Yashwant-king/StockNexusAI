@@ -244,6 +244,18 @@
                 </select>
             </div>
             
+            <div style="margin:1rem 0; padding:1rem; background:rgba(99,102,241,0.06); border:1px solid rgba(99,102,241,0.15); border-radius:12px;">
+                <div style="font-size:0.75rem; font-weight:700; color:#a5b4fc; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                    <i class="fas fa-magic"></i> AI Smart Status Creator
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="aiPromoItem" class="f-input" style="flex:1;" placeholder="Item name (e.g. Fresh Mangoes)">
+                    <button class="modal-btn modal-ok" style="width:auto; padding:0 15px; font-size:0.75rem;" onclick="generateAIPromo()">
+                        <span id="aiBtnText">AI Generate</span>
+                    </button>
+                </div>
+            </div>
+            
             <div class="f-group" style="margin-top:1rem;">
                 <label class="f-label">Broadcast Message</label>
                 <textarea id="campaignMsg" class="f-input" style="height:120px; resize:none; line-height:1.5; font-size:0.8rem;"></textarea>
@@ -251,7 +263,14 @@
             
             <div class="modal-btns" style="margin-top:1.5rem;">
                 <button class="modal-btn modal-cancel" onclick="document.getElementById('marketingModal').classList.remove('show')">Cancel</button>
-                <button class="modal-btn" style="background:linear-gradient(135deg,#25D366,#128C7E); color:white; border:none;" onclick="sendBroadcast()"><i class="fas fa-paper-plane"></i> Launch Campaign</button>
+                <div style="display:flex; flex-direction:column; gap:8px; flex:1;">
+                    <button class="modal-btn" style="background:linear-gradient(135deg,#25D366,#128C7E); color:white; border:none;" onclick="sendBroadcast()">
+                        <i class="fas fa-paper-plane"></i> Copy to Status
+                    </button>
+                    <button class="modal-btn" style="background:rgba(37,211,102,0.1); color:#25D366; border:1px solid #25D366;" onclick="bulkMessageMode()">
+                        <i class="fas fa-users"></i> Send DMs to All Customers
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -292,6 +311,8 @@
                             <div class="cust-actions" onclick="event.stopPropagation()">
                                 <button class="btn-sm btn-udhar" onclick="selectAndUdhar(${c.id},'${c.name.replace(/'/g,"\\'")}','${(c.phone||'').replace(/'/g,"\\'")}',${c.balance})">+ Udhar</button>
                                 <button class="btn-sm btn-pay" onclick="selectAndPay(${c.id},'${c.name.replace(/'/g,"\\'")}','${(c.phone||'').replace(/'/g,"\\'")}',${c.balance})">+ Payment</button>
+                                ${c.balance > 0 ? `<button class="btn-sm" style="background:#f59e0b; color:white;" onclick="sendReminder('${c.phone}', ${c.balance}, '${c.name.replace(/'/g,"\\'")}')"><i class="fas fa-bell"></i></button>` : ''}
+                                <button class="btn-sm" style="background:#25D366; color:white;" onclick="messageCustomer('${c.phone}')"><i class="fab fa-whatsapp"></i></button>
                                 <button class="btn-sm btn-del" onclick="deleteCustomer(${c.id},'${c.name.replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i></button>
                             </div>
                         </div>
@@ -446,15 +467,96 @@
             const msg = document.getElementById('campaignMsg').value;
             if(!msg) return;
             
-            // To do a real WhatsApp broadcast via URL, you need to copy the text 
-            // and open WhatsApp Web, because WA URLs don't support multi-recipient BCC directly.
             navigator.clipboard.writeText(msg).then(() => {
-                showToast('✅ Copied! Open WA Broadcast List', 'ok');
+                showToast('✅ Copied! Opening Status page...', 'ok');
                 setTimeout(() => {
                     window.open('https://web.whatsapp.com/', '_blank');
                     document.getElementById('marketingModal').classList.remove('show');
                 }, 1000);
             });
+        }
+
+        async function bulkMessageMode() {
+            const msg = document.getElementById('campaignMsg').value;
+            if(!msg) return showToast('❌ Write a message first', 'err');
+
+            try {
+                const res = await fetch('/api/khata/customers');
+                const data = await res.json();
+                if (!data.success || data.customers.length === 0) return showToast('❌ No customers found', 'err');
+
+                const customers = data.customers.filter(c => c.phone && c.phone.length >= 10);
+                if (customers.length === 0) return showToast('❌ No customers with valid phone numbers', 'err');
+
+                if (confirm(`Target: ${customers.length} Customers.\n\nNote: Browsers block multiple tabs. We will open them one by one. Ready to start?`)) {
+                    document.getElementById('marketingModal').classList.remove('show');
+                    
+                    let i = 0;
+                    function openNext() {
+                        if (i >= customers.length) {
+                            return showToast('✅ Campaign finished!', 'ok');
+                        }
+                        const c = customers[i];
+                        const formatted = '91' + c.phone.replace(/\D/g, '').slice(-10);
+                        window.open(`https://wa.me/${formatted}?text=${encodeURIComponent(msg)}`, '_blank');
+                        
+                        i++;
+                        if (i < customers.length) {
+                            setTimeout(() => {
+                                if(confirm(`[${i}/${customers.length}] Message sent to ${c.name || c.phone}. Send next message?`)) {
+                                    openNext();
+                                }
+                            }, 500);
+                        } else {
+                            showToast('✅ All messages sent!', 'ok');
+                        }
+                    }
+                    openNext();
+                }
+            } catch(e) {
+                showToast('❌ Failed to fetch customer list', 'err');
+            }
+        }
+
+        async function generateAIPromo() {
+            const item = document.getElementById('aiPromoItem').value.trim();
+            if (!item) return showToast('❌ Enter an item name first', 'err');
+            
+            const btn = document.getElementById('aiBtnText');
+            const originalText = btn.textContent;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Writing...';
+            
+            try {
+                const res = await fetch('/api/generate_promo', {
+                    method: 'POST',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify({item_name: item})
+                });
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('campaignMsg').value = data.promo;
+                    showToast('✨ AI Promo Generated!', 'ok');
+                } else {
+                    showToast('❌ AI Error: ' + data.error, 'err');
+                }
+            } catch(e) {
+                showToast('❌ Connection error', 'err');
+            } finally {
+                btn.textContent = originalText;
+            }
+        }
+        async function messageCustomer(phone) {
+            if (!phone || phone === 'null' || phone === 'No phone') return showToast('❌ No phone number provided', 'err');
+            const formatted = '91' + phone.replace(/\D/g, '').slice(-10);
+            window.open(`https://wa.me/${formatted}?text=Hello! This is Kirana Store. How can we help you today?`, '_blank');
+        }
+
+        async function sendReminder(phone, balance, name) {
+            if (!phone || phone === 'null' || phone === 'No phone') return showToast('❌ No phone number', 'err');
+            const formatted = '91' + phone.replace(/\D/g, '').slice(-10);
+            const msg = `नमस्ते ${name}!\\n\\nआपके किराना स्टोर का बकाया: ₹${balance.toLocaleString('en-IN')}\\n\\nकृपया जल्द भुगतान करें। धन्यवाद! 🙏\\n\\n(This is an automated reminder from Kirana Store)`;
+            window.open(`https://wa.me/${formatted}?text=${encodeURIComponent(msg)}`, '_blank');
+            showToast('🔔 Reminder link opened!', 'ok');
         }
     </script>
 </body>
