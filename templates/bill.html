@@ -65,7 +65,18 @@
         .btn-print:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(99,102,241,0.4);}
         .btn-wa{width:100%;padding:14px;background:linear-gradient(135deg,#25D366,#128C7E);color:#fff;border:none;border-radius:12px;font-weight:700;font-size:1rem;cursor:pointer;margin-top:10px;font-family:'Inter',sans-serif;box-shadow:0 4px 15px rgba(37,211,102,0.3);transition:all 0.2s;}
         .btn-wa:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(37,211,102,0.4);}
+        .btn-upi{width:100%;padding:14px;background:linear-gradient(135deg,#7c3aed,#4f46e5);color:#fff;border:none;border-radius:12px;font-weight:700;font-size:1rem;cursor:pointer;margin-top:10px;font-family:'Inter',sans-serif;box-shadow:0 4px 15px rgba(124,58,237,0.3);transition:all 0.2s;}
+        .btn-upi:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(124,58,237,0.4);}
         .btn-clear{width:100%;padding:10px;background:transparent;color:#ef4444;border:1px solid rgba(239,68,68,0.3);border-radius:10px;font-weight:600;font-size:0.85rem;cursor:pointer;margin-top:10px;font-family:'Inter',sans-serif;}
+
+        /* UPI Modal */
+        .upi-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:5000;align-items:center;justify-content:center;}
+        .upi-modal-bg.show{display:flex;}
+        .upi-modal{background:#0f172a;border:1px solid rgba(99,102,241,0.3);border-radius:20px;padding:2rem;width:360px;text-align:center;}
+        .upi-amount{font-size:2.5rem;font-weight:900;color:#34d399;margin:0.5rem 0;}
+        .upi-link-box{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 14px;font-size:0.72rem;color:#94a3b8;word-break:break-all;margin:1rem 0;text-align:left;}
+        .upi-id-input{width:100%;background:rgba(255,255,255,0.05);border:1px solid rgba(99,102,241,0.3);border-radius:10px;padding:10px 14px;color:#fff;font-size:0.9rem;font-family:'Inter',sans-serif;outline:none;margin-bottom:0.8rem;text-align:center;}
+
         
         .empty-bill{text-align:center;color:#64748b;font-size:0.85rem;margin-top:2rem;}
 
@@ -164,6 +175,7 @@
                     <button class="btn-print" style="background:linear-gradient(135deg,#10b981,#059669);color:white;" onclick="completeCheckout()"><i class="fas fa-check-circle"></i> Complete & Save Bill</button>
                     <button class="btn-print" onclick="window.print()"><i class="fas fa-print"></i> Print Bill / PDF</button>
                     <button class="btn-wa" onclick="sendWhatsApp()"><i class="fab fa-whatsapp"></i> Send WhatsApp Receipt</button>
+                    <button class="btn-upi" onclick="openUPIModal()"><i class="fas fa-qrcode"></i> Generate UPI Payment</button>
                     <button class="btn-clear" onclick="clearBill()">Clear Bill</button>
                 </div>
             </div>
@@ -340,3 +352,77 @@
                         receiptText += "\nThank you for shopping with us! Visit again!";
                         
                         window.open(`https://wa.me/${formatted}?text=${encodeURIComponent(receiptText)}`, '_blank');
+
+                    }
+                    clearBill();
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch(e) {
+                alert("Network error during checkout.");
+            }
+        }
+
+        // ── UPI PAYMENT GENERATOR ───────────────────────────
+        function openUPIModal() {
+            const total = parseFloat(document.getElementById('totalAmount').textContent) || 0;
+            if (total === 0) return alert("Bill is empty! Add items first.");
+            document.getElementById('upiAmount').textContent = total;
+            document.getElementById('upiAmountInput').value = total;
+            generateUPILink();
+            document.getElementById('upiModalBg').classList.add('show');
+        }
+
+        function generateUPILink() {
+            const upiId = document.getElementById('upiIdInput').value.trim() || 'yourstore@upi';
+            const amount = document.getElementById('upiAmountInput').value || '0';
+            const name = 'Kirana+Store';
+            const link = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${name}&am=${amount}&cu=INR&tn=Payment`;
+            document.getElementById('upiLinkBox').textContent = link;
+            // Generate QR using a free API
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(link)}&bgcolor=0f172a&color=34d399`;
+            document.getElementById('upiQR').src = qrUrl;
+        }
+
+        function copyUPILink() {
+            const link = document.getElementById('upiLinkBox').textContent;
+            navigator.clipboard.writeText(link).then(() => {
+                const btn = document.getElementById('copyUPIBtn');
+                btn.textContent = 'Copied!';
+                setTimeout(() => btn.textContent = 'Copy Link', 2000);
+            });
+        }
+
+        function shareUPIWhatsApp() {
+            const amount = document.getElementById('upiAmountInput').value;
+            const upiId = document.getElementById('upiIdInput').value.trim() || 'yourstore@upi';
+            const msg = `Please pay Rs.${amount} to our store via UPI.
+UPI ID: ${upiId}
+Or use this link: upi://pay?pa=${upiId}&am=${amount}&cu=INR`;
+            window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+        }
+    </script>
+
+    <!-- UPI MODAL -->
+    <div class="upi-modal-bg" id="upiModalBg" onclick="if(event.target===this) this.classList.remove('show')">
+        <div class="upi-modal">
+            <div style="font-size:1.5rem; margin-bottom:0.5rem;">💳 UPI Payment</div>
+            <div style="color:#64748b; font-size:0.85rem; margin-bottom:1rem;">Scan QR or share link with customer</div>
+            <div class="upi-amount">₹<span id="upiAmount">0</span></div>
+            
+            <input class="upi-id-input" id="upiIdInput" placeholder="Your UPI ID (e.g. shop@paytm)" oninput="generateUPILink()">
+            <input type="hidden" id="upiAmountInput">
+            
+            <img id="upiQR" src="" alt="UPI QR Code" style="width:200px;height:200px;border-radius:12px;border:2px solid rgba(99,102,241,0.3);margin:0.5rem auto;display:block;">
+            
+            <div class="upi-link-box" id="upiLinkBox">Generate link above</div>
+            
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:0.5rem;">
+                <button id="copyUPIBtn" onclick="copyUPILink()" style="padding:10px;background:rgba(99,102,241,0.15);color:#a5b4fc;border:1px solid rgba(99,102,241,0.3);border-radius:10px;cursor:pointer;font-weight:600;font-family:'Inter',sans-serif;">Copy Link</button>
+                <button onclick="shareUPIWhatsApp()" style="padding:10px;background:rgba(37,211,102,0.15);color:#25D366;border:1px solid rgba(37,211,102,0.3);border-radius:10px;cursor:pointer;font-weight:600;font-family:'Inter',sans-serif;"><i class="fab fa-whatsapp"></i> Share</button>
+            </div>
+            <button onclick="document.getElementById('upiModalBg').classList.remove('show')" style="width:100%;margin-top:10px;padding:8px;background:transparent;color:#ef4444;border:1px solid rgba(239,68,68,0.2);border-radius:8px;cursor:pointer;font-family:'Inter',sans-serif;">Close</button>
+        </div>
+    </div>
+</body>
+</html>

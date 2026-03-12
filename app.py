@@ -1383,5 +1383,118 @@ def generate_promo():
         return jsonify({"success": False, "error": str(e)}), 500
 
 
+
+# ═══════════════════════════════════════════════
+# NEW FEATURES (Daily Report & Smart Discounts)
+# ═══════════════════════════════════════════════
+
+@app.route('/api/daily-report')
+def daily_report():
+    """Generates a WhatsApp-ready daily summary report."""
+    try:
+        df = db.get_all_items()
+        customers = db.get_all_customers()
+        expenses = db.get_all_expenses()
+        from datetime import datetime
+        
+        today_date = datetime.now().strftime('%d %b %Y')
+        
+        # Calculate stats
+        total_revenue = df['total_revenue'].astype(float).sum() if df is not None and not df.empty else 0
+        total_items = len(df) if df is not None and not df.empty else 0
+        total_outstanding = sum(c['balance'] for c in customers if c['balance'] > 0) if customers else 0
+        total_expenses = sum(float(e.get('amount', 0)) for e in expenses) if expenses else 0
+        net_profit = total_revenue - total_expenses
+        
+        report = f"📊 *KIRANA STORE DAILY REPORT* 📊\n"
+        report += f"📅 Date: {today_date}\n"
+        report += f"-----------------------------\n"
+        report += f"💰 *Total Sales*: ₹{total_revenue:,.0f}\n"
+        report += f"💸 *Expenses*: ₹{total_expenses:,.0f}\n"
+        report += f"💵 *Net Profit*: ₹{net_profit:,.0f}\n"
+        report += f"-----------------------------\n"
+        report += f"📝 *Khata (Udhar)*: ₹{total_outstanding:,.0f} pending\n"
+        report += f"📦 *Total Products*: {total_items} items in stock\n"
+        
+        # Low stock items to order
+        if df is not None and not df.empty:
+            low_stock = df[df['quantity_stock'].astype(float) <= df['minimum_stock_level'].astype(float)]
+            if len(low_stock) > 0:
+                report += f"\n⚠️ *Urgent Reorder Required ({len(low_stock)} items):*\n"
+                for name in low_stock['product_name'].head(5).tolist():
+                    report += f"- {name}\n"
+                if len(low_stock) > 5:
+                    report += f"...and {len(low_stock) - 5} more.\n"
+        
+        report += f"\n_Generated automatically by StockNexus AI_"
+        
+        return jsonify({"success": True, "report": report})
+    except Exception as e:
+        print(f"Daily report error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/discount-suggestions')
+def discount_suggestions():
+    """AI engine for calculating optimal discounts for near-expiry items."""
+    try:
+        df = db.get_all_items()
+        if df is None or df.empty:
+            return jsonify({"success": True, "suggestions": []})
+            
+        suggestions = []
+        from datetime import datetime
+        today = datetime.now()
+        
+        for _, row in df.iterrows():
+            try:
+                exp_str = str(row.get('expiry_date', ''))
+                # Find valid expiry date
+                exp_date = None
+                for fmt in ['%d/%m/%y', '%d/%m/%Y', '%Y-%m-%d']:
+                    try:
+                        exp_date = datetime.strptime(exp_str, fmt)
+                        break
+                    except ValueError:
+                        continue
+                        
+                if exp_date:
+                    days_left = (exp_date - today).days
+                    stock = int(row.get('quantity_stock', 0))
+                    price = float(row.get('price', row.get('total_revenue', 0) / max(stock, 1))) # Estimate price
+                    
+                    if 0 < days_left <= 15 and stock > 0:
+                        # Smart discount logic based on days left (Closer to expiry = higher discount)
+                        if days_left <= 2:
+                            discount_pct = 60
+                        elif days_left <= 7:
+                            discount_pct = 40
+                        elif days_left <= 10:
+                            discount_pct = 25
+                        else:
+                            discount_pct = 15
+                            
+                        sale_price = price * (1 - discount_pct/100)
+                        
+                        suggestions.append({
+                            "product_name": row['product_name'],
+                            "days_left": days_left,
+                            "stock": stock,
+                            "original_price": price,
+                            "discount": discount_pct,
+                            "sale_price": sale_price,
+                            "estimated_savings": sale_price * stock # Recovered money instead of dropping to zero
+                        })
+            except Exception as item_err:
+                continue
+                
+        # Sort by most urgent (fewest days left)
+        suggestions.sort(key=lambda x: x['days_left'])
+        
+        return jsonify({"success": True, "suggestions": suggestions})
+    except Exception as e:
+        print(f"Discount suggestions error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
 if __name__ == '__main__':
+
     app.run(debug=True, host='0.0.0.0', port=5000)
