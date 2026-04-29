@@ -324,17 +324,22 @@
                     return;
                 }
 
-                list.innerHTML = data.customers.map(c => `
-                    <div class="cust-card ${selectedCustomerId == c.id ? 'selected' : ''}" onclick="selectCustomer(${c.id}, '${c.name.replace(/'/g,"\\'")}', '${(c.phone||'').replace(/'/g,"\\'")}', ${c.balance})">
+                list.innerHTML = data.customers.map(c => {
+                    const safeName = c.name.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                    const safePhone = (c.phone||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+                    return `
+                    <div class="cust-card ${selectedCustomerId == c.id ? 'selected' : ''}"
+                         data-id="${c.id}" data-name="${safeName}" data-phone="${safePhone}" data-balance="${c.balance}"
+                         onclick="selectCustomerCard(this)">
                         <div>
                             <div class="cust-name">${c.name}</div>
                             <div class="cust-phone">${c.phone || 'No phone'}</div>
                             <div class="cust-actions" onclick="event.stopPropagation()">
-                                <button class="btn-sm btn-udhar" onclick="selectAndUdhar(${c.id},'${c.name.replace(/'/g,"\\'")}','${(c.phone||'').replace(/'/g,"\\'")}',${c.balance})">+ Udhar</button>
-                                <button class="btn-sm btn-pay" onclick="selectAndPay(${c.id},'${c.name.replace(/'/g,"\\'")}','${(c.phone||'').replace(/'/g,"\\'")}',${c.balance})">+ Payment</button>
-                                ${c.balance > 0 ? `<button class="btn-sm" style="background:#f59e0b; color:white;" onclick="sendReminder('${c.phone}', ${c.balance}, '${c.name.replace(/'/g,"\\'")}')"><i class="fas fa-bell"></i></button>` : ''}
-                                <button class="btn-sm" style="background:#25D366; color:white;" onclick="messageCustomer('${c.phone}')"><i class="fab fa-whatsapp"></i></button>
-                                <button class="btn-sm btn-del" onclick="deleteCustomer(event, ${c.id},'${c.name.replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i></button>
+                                <button class="btn-sm btn-udhar" data-action="udhar" data-id="${c.id}" data-name="${safeName}" data-phone="${safePhone}" data-balance="${c.balance}" onclick="handleCardAction(this)">+ Udhar</button>
+                                <button class="btn-sm btn-pay"   data-action="pay"   data-id="${c.id}" data-name="${safeName}" data-phone="${safePhone}" data-balance="${c.balance}" onclick="handleCardAction(this)">+ Payment</button>
+                                ${c.balance > 0 ? `<button class="btn-sm" style="background:#f59e0b; color:white;" data-action="remind" data-id="${c.id}" data-name="${safeName}" data-phone="${safePhone}" data-balance="${c.balance}" onclick="handleCardAction(this)"><i class="fas fa-bell"></i></button>` : ''}
+                                <button class="btn-sm" style="background:#25D366; color:white;" data-action="whatsapp" data-id="${c.id}" data-phone="${safePhone}" onclick="handleCardAction(this)"><i class="fab fa-whatsapp"></i></button>
+                                <button class="btn-sm btn-del" data-action="delete" data-id="${c.id}" data-name="${safeName}" onclick="handleCardAction(this)"><i class="fas fa-trash"></i></button>
                             </div>
                         </div>
                         <div class="cust-bal">
@@ -343,9 +348,8 @@
                             </div>
                             <div class="cust-bal-label">${c.balance > 0 ? 'Due' : 'Paid'}</div>
                         </div>
-                    </div>
-                    </div>
-                `).join('');
+                    </div>`;
+                }).join('');
 
                 // Calculate Top 5 Customers by total purchased amount (total_udhar represents total sales value for them)
                 const vips = [...data.customers].sort((a,b) => b.total_udhar - a.total_udhar).filter(c => c.total_udhar > 0).slice(0, 5);
@@ -391,19 +395,68 @@
             } catch(e) { showToast('❌ Error', 'err'); }
         }
 
-        function selectCustomer(id, name, phone, balance) {
+        function selectCustomer(id, name, phone, balance, el) {
             selectedCustomerId = id;
             document.getElementById('txnPanelEmpty').style.display = 'none';
             document.getElementById('txnPanel').classList.add('show');
             document.getElementById('txnCustName').textContent = name;
             document.getElementById('txnCustPhone').textContent = phone || 'No phone';
-            document.getElementById('txnBalance').textContent = '₹' + balance.toLocaleString('en-IN');
+            document.getElementById('txnBalance').textContent = '₹' + parseFloat(balance).toLocaleString('en-IN');
             document.getElementById('txnBalance').style.color = balance > 0 ? '#f87171' : '#34d399';
             loadTransactions(id);
             loadPurchaseHistory(id);
-            // Highlight
             document.querySelectorAll('.cust-card').forEach(c => c.classList.remove('selected'));
-            event.currentTarget.classList.add('selected');
+            if (el) el.classList.add('selected');
+        }
+
+        function selectCustomerCard(el) {
+            const id      = parseInt(el.dataset.id);
+            const name    = el.dataset.name;
+            const phone   = el.dataset.phone;
+            const balance = parseFloat(el.dataset.balance);
+            selectCustomer(id, name, phone, balance, el);
+        }
+
+        function handleCardAction(btn) {
+            const action  = btn.dataset.action;
+            const id      = parseInt(btn.dataset.id);
+            const name    = btn.dataset.name || '';
+            const phone   = btn.dataset.phone || '';
+            const balance = parseFloat(btn.dataset.balance || 0);
+
+            if (action === 'udhar') {
+                selectCustomer(id, name, phone, balance, btn.closest('.cust-card'));
+                openTxnModal('udhar');
+            } else if (action === 'pay') {
+                selectCustomer(id, name, phone, balance, btn.closest('.cust-card'));
+                openTxnModal('payment');
+            } else if (action === 'remind') {
+                sendReminder(phone, balance, name);
+            } else if (action === 'whatsapp') {
+                messageCustomer(phone);
+            } else if (action === 'delete') {
+                if (!confirm('Delete ' + name + ' and all their transactions?')) return;
+                fetch('/api/khata/delete-customer', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({customer_id: id})
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        showToast('✅ Customer deleted!', 'ok');
+                        if (selectedCustomerId === id) {
+                            document.getElementById('txnPanel').classList.remove('show');
+                            document.getElementById('txnPanelEmpty').style.display = 'block';
+                            selectedCustomerId = null;
+                        }
+                        loadCustomers();
+                    } else {
+                        showToast('❌ ' + (data.error || 'Failed to delete'), 'err');
+                    }
+                })
+                .catch(() => showToast('❌ Network error', 'err'));
+            }
         }
 
         async function loadTransactions(custId) {
@@ -467,8 +520,8 @@
             }
         }
 
-        function selectAndUdhar(id, name, phone, bal) { selectCustomer(id,name,phone,bal); openTxnModal('udhar'); }
-        function selectAndPay(id, name, phone, bal) { selectCustomer(id,name,phone,bal); openTxnModal('payment'); }
+        function selectAndUdhar(id, name, phone, bal) { selectCustomer(id, name, phone, bal, null); openTxnModal('udhar'); }
+        function selectAndPay(id, name, phone, bal)   { selectCustomer(id, name, phone, bal, null); openTxnModal('payment'); }
 
         function openTxnModal(type) {
             if (!selectedCustomerId) return showToast('❌ Select a customer first', 'err');
