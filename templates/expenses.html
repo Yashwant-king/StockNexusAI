@@ -169,14 +169,26 @@
 
         async function delExp(id) {
             if(!confirm("Delete this expense record?")) return;
-            try {
-                const res = await fetch(`/api/delete-expense/${id}`, { method: 'DELETE' });
-                const data = await res.json();
-                if(data.success) window.location.reload();
-                else alert(data.error);
-            } catch(e) {
-                alert("Error deleting record.");
-            }
+            fetch('/api/delete-expense', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ expense_id: id })
+            })
+            .then(r => {
+                if (!r.ok) throw new Error('Server error: ' + r.status);
+                return r.json();
+            })
+            .then(data => {
+                if(data.success) {
+                    window.location.reload();
+                } else {
+                    alert('❌ Delete failed: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(err => {
+                alert('❌ Network/Server error: ' + err.message);
+                console.error('Delete error:', err);
+            });
         }
     </script>
 </body>

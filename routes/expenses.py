@@ -61,13 +61,29 @@ def delete_expense_route(expense_id):
         return jsonify({"success": False, "error": str(e)}), 500
 
 
-# ── REST DELETE used by the template fetch() call ────────────────────────────
-@expenses_bp.route('/api/delete-expense/<int:expense_id>', methods=['DELETE', 'GET'])
-def api_delete_expense(expense_id):
+# ── REST DELETE — matches inventory pattern exactly (POST + JSON body) ─────────
+@expenses_bp.route('/api/delete-expense', methods=['POST'])
+def api_delete_expense():
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+        expense_id = data.get('expense_id')
+        if not expense_id:
+            return jsonify({"success": False, "error": "expense_id required"}), 400
+        success = db.delete_expense(int(expense_id))
+        if success:
+            return jsonify({"success": True, "message": "Expense deleted!"}), 200
+        return jsonify({"success": False, "error": "Expense not found in database."}), 404
+    except Exception as e:
+        print(f"Delete expense error: {e}")
+        return jsonify({"success": False, "error": f"DB Error: {str(e)}"}), 500
+
+# ── Old URL-based delete (kept for backwards compat) ─────────────────────────
+@expenses_bp.route('/api/delete-expense/<int:expense_id>', methods=['DELETE', 'GET', 'POST'])
+def api_delete_expense_url(expense_id):
     try:
         success = db.delete_expense(expense_id)
         if success:
-            return jsonify({"success": True, "message": "Expense deleted"})
-        return jsonify({"success": False, "error": "Failed to delete"}), 500
+            return jsonify({"success": True, "message": "Expense deleted!"}), 200
+        return jsonify({"success": False, "error": "Expense not found."}), 404
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500

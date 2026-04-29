@@ -75,16 +75,17 @@ def api_get_transactions(customer_id):
 def api_delete_customer():
     """Delete a customer and all their transactions. Accepts JSON body."""
     try:
-        data = request.get_json()
+        data = request.get_json(force=True, silent=True) or {}
         customer_id = data.get('customer_id')
         if not customer_id:
             return jsonify({"success": False, "error": "customer_id required"}), 400
         success = db.delete_customer(int(customer_id))
         if success:
-            return jsonify({"success": True, "message": "Customer deleted"})
-        return jsonify({"success": False, "error": "Failed to delete customer"}), 500
+            return jsonify({"success": True, "message": "Customer deleted!"}), 200
+        return jsonify({"success": False, "error": "Customer not found in database."}), 404
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        print(f"Delete customer error: {e}")
+        return jsonify({"success": False, "error": f"DB Error: {str(e)}"}), 500
 
 # ── Legacy form-based routes (kept for backward compatibility) ────────────────
 
