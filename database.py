@@ -617,7 +617,6 @@ def add_expense(description, amount, date):
 
 def delete_expense(expense_id):
     """Delete an expense."""
-    deleted = False
     if use_db():
         try:
             conn = get_connection()
@@ -626,13 +625,15 @@ def delete_expense(expense_id):
             deleted = cur.rowcount > 0
             conn.commit()
             cur.close()
+            return deleted
         except Exception as e:
             print(f"❌ DB delete expense error: {e}")
+            return False
         finally:
             if 'conn' in locals():
                 release_connection(conn)
 
-    # CSV fallback
+    # CSV fallback (only runs if DATABASE_URL is not set)
     try:
         if os.path.exists(EXPENSES_CSV):
             df = pd.read_csv(EXPENSES_CSV)
