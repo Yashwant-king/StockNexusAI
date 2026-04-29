@@ -1,88 +1,60 @@
-# StockNexus AI 🏪
+# 🏪 StockNexus AI — Kirana Command Center
 
-**Smart Kirana Command Center** - An AI-powered inventory management system tailored for Indian retail, featuring live stock tracking, credit books (Khata), expense management, and predictive analytics.
+An advanced AI-powered inventory, khata (credit), and business management system specifically built for Indian Kirana stores. Built with Flask, Supabase (PostgreSQL), and Groq AI.
 
-[![Python](https://img.shields.io/badge/Python-3.8+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![Flask](https://img.shields.io/badge/Flask-3.0+-000000?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![AI](https://img.shields.io/badge/AI-LLAMA%203.3-8A2BE2?style=for-the-badge&logo=meta&logoColor=white)](https://groq.com/)
+## ✨ Features
 
----
-
-## 🌟 Key Features
-
-- 📊 **Real-time Inventory Tracking**: Automated stock level monitoring with low-stock alerts.
-- 💳 **Smart Khata (Credit Book)**: Digital ledger for customer debts and payments with loyalty point tracking.
-- 📉 **Predictive Analytics**: LSTM-powered demand forecasting to optimize restocking schedules.
-- 🤖 **AI Assistant**: Groq-powered chat interface for business insights and automated promo generation.
-- 🧾 **Invoice Scanner**: OCR-based inventory updates from supplier invoices.
-- 💰 **Expense Tracking**: Simplified daily business expense logging.
-- 🔄 **Dual Mode**: Seamlessly switch between Cloud (Supabase) and Local (CSV) storage.
-
----
-
-## 📸 Screenshots
-
-### 🔑 Secure Authentication
-![Login Page](screenshots/login.png)
-
-### 📊 Kirana Command Center (Dashboard)
-![Dashboard](screenshots/dashboard.png)
-
-### 📦 Inventory Management
-![Inventory](screenshots/inventory.png)
-
-### 🔮 AI Predictions
-![Predictions](screenshots/predict.png)
-
----
+- **📦 Smart Inventory Management**: Track stock levels, set minimum stock alerts, and monitor expiry dates.
+- **📒 Digital Khata (Credit Book)**: Replace your physical ledger. Track customers, udhar (credit), and payments seamlessly.
+- **💸 Expense Tracking**: Keep an eye on shop expenses (electricity, rent, supplies) to calculate true net profit.
+- **🤖 LLaMA-Powered AI Assistant**: Chat with your store data! The AI knows your stock, khata balances, and expenses. Ask "Which items are expiring soon?" or "Who owes me the most money?"
+- **📱 WhatsApp Integration**: Send automated payment reminders, promotional messages, and daily business reports directly to WhatsApp.
+- **📈 AI Sales Predictions**: Predict next month's sales based on historical data using an integrated AI model.
+- **📊 Analytics Dashboard**: Visualize revenue, top-selling products, and stock health at a glance.
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: HTML5, Vanilla CSS3 (Glassmorphism), JavaScript (ES6+)
-- **Backend**: Python 3, Flask
-- **Database**: PostgreSQL (Supabase) with Connection Pooling
-- **AI/ML**: TensorFlow (LSTM), Groq (LLaMA 3.3), Scikit-learn
-- **Data**: Pandas, Numpy
+- **Backend**: Python, Flask
+- **Frontend**: HTML5, Vanilla JavaScript, CSS (Glassmorphism UI)
+- **Database**: Supabase (PostgreSQL) + local CSV fallback
+- **AI / LLM**: Groq API (LLaMA 3.3 70B Versatile)
+- **Deployment**: Render
 
----
+## 🚀 Live Demo
+Access the live application here: [StockNexus AI on Render](https://stocknexusai-2.onrender.com)
 
-## 🚀 Quick Start
+## 💻 Local Setup
 
-### 1. Clone the repository
-```bash
-git clone https://github.com/Yashwant-king/StockNexusAI.git
-cd StockNexusAI
-```
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Yashwant-king/StockNexusAI.git
+   cd StockNexusAI
+   ```
 
-### 2. Install dependencies
-```bash
-pip install -r requirements.txt
-```
+2. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-### 3. Configure Environment
-Create a `.env` file from the template:
-```bash
-cp .env.example .env
-# Edit .env with your actual keys
-```
+3. **Environment Variables:**
+   Create a `.env` file in the root directory and add the following keys:
+   ```env
+   SECRET_KEY=your_secret_key_here
+   GROQ_API_KEY=your_groq_api_key
+   DATABASE_URL=postgresql://postgres.your_supabase_url
+   ```
 
-### 4. Run the Application
-```bash
-python run.py
-```
-Access the dashboard at `http://localhost:5000`
+4. **Run the application:**
+   ```bash
+   python app.py
+   ```
+   The app will run at `http://127.0.0.1:5000`
 
----
+## 🔒 Security Note
+This project requires user authentication. Ensure `SECRET_KEY` is set in production.
 
-## 🏗️ Architecture
-
-StockNexus AI follows a modular monolithic architecture, utilizing:
-- **Global Auth Hook**: Centralized session management.
-- **CSV Fallback**: Automatic fallback to local storage if DB connection fails.
-- **Predictive Engine**: Integrated training pipeline for custom shop data.
-
----
+## 🤝 Contributing
+Contributions, issues, and feature requests are welcome!
 
 ## 📝 License
-This project is for demonstration and kirana store optimization purposes. Built with ❤️ by StockNexus AI.
+This project is open source and available under the [MIT License](LICENSE).
