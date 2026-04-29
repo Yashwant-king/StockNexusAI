@@ -43,6 +43,47 @@ def require_login():
     if request.endpoint and request.endpoint not in allowed_routes and 'user_id' not in session:
         return redirect(url_for('login_page'))
 
+@app.route('/api/chat-context')
+def chat_context_debug():
+    """Shows exactly what context the AI chatbot reads from all 4 tables."""
+    import database as db
+    context = {}
+
+    # Table 1: Inventory
+    try:
+        df = db.get_all_items()
+        context['inventory'] = {
+            'total_products': len(df) if df is not None else 0,
+            'products': df[['product_name','quantity_stock','minimum_stock_level','total_revenue','expiry_date']].to_dict('records') if df is not None and not df.empty else []
+        }
+    except Exception as e:
+        context['inventory'] = {'error': str(e)}
+
+    # Table 2 & 3: Khata customers + transactions (balance)
+    try:
+        customers = db.get_all_customers()
+        context['khata'] = {
+            'total_customers': len(customers),
+            'total_outstanding': sum(c['balance'] for c in customers if c['balance'] > 0),
+            'customers': customers
+        }
+    except Exception as e:
+        context['khata'] = {'error': str(e)}
+
+    # Table 4: Expenses
+    try:
+        expenses = db.get_all_expenses()
+        context['expenses'] = {
+            'total_records': len(expenses),
+            'total_amount': sum(float(e['amount']) for e in expenses),
+            'records': expenses
+        }
+    except Exception as e:
+        context['expenses'] = {'error': str(e)}
+
+    return jsonify(context)
+
+
 # Global Error Handlers
 @app.errorhandler(404)
 def page_not_found(e):
