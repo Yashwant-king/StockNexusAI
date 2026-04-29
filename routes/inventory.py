@@ -117,23 +117,21 @@ def add_item():
 def delete_item():
     try:
         data = request.get_json()
-        # Frontend sends product_id; also support item_id for DB mode
         item_id = data.get('item_id') or data.get('product_id')
         if not item_id:
             return jsonify({"success": False, "error": "No ID provided"}), 400
 
         if db.use_db():
-            # Try to delete by DB integer id first, then by product_id string
             success = db.delete_item(item_id)
         else:
-            # CSV mode: delete by product_id
             success = db.delete_item_by_product_id(str(item_id))
 
         if success:
             return jsonify({"success": True, "message": "Item deleted!"}), 200
-        return jsonify({"success": False, "error": "Failed to delete item."}), 500
+        return jsonify({"success": False, "error": f"Item '{item_id}' not found in database."}), 404
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        print(f"Delete route error: {e}")
+        return jsonify({"success": False, "error": f"DB Error: {str(e)}"}), 500
 
 @inventory_bp.route('/api/export-csv')
 def export_csv():

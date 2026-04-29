@@ -30,8 +30,12 @@ def get_connection():
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
 def release_connection(conn):
-    """Release a connection back to the pool."""
+    """Release a connection back to the pool, resetting any broken transaction."""
     if db_pool and conn:
+        try:
+            conn.rollback()  # Reset any failed/uncommitted transaction before reuse
+        except Exception:
+            pass
         db_pool.putconn(conn)
 
 def init_db():
@@ -182,24 +186,28 @@ def add_item(product_id, product_name, quantity_stock, minimum_stock_level, tota
 
 
 def delete_item(item_id):
-    """Delete an item by its database ID or product_id string."""
+    """Delete an item by product_id string (primary) or integer DB id (fallback)."""
     if use_db():
         try:
             conn = get_connection()
             cur = conn.cursor(cursor_factory=RealDictCursor)
-            # Try integer ID first, fallback to product_id string
-            try:
-                int_id = int(item_id)
-                cur.execute("DELETE FROM inventory WHERE id = %s OR product_id = %s;", (int_id, str(item_id)))
-            except (ValueError, TypeError):
-                cur.execute("DELETE FROM inventory WHERE product_id = %s;", (str(item_id),))
+            # Always try product_id first (reliable string match)
+            cur.execute("DELETE FROM inventory WHERE product_id = %s;", (str(item_id),))
             deleted = cur.rowcount > 0
+            if not deleted:
+                # Fallback: try by integer DB SERIAL id
+                try:
+                    int_id = int(item_id)
+                    cur.execute("DELETE FROM inventory WHERE id = %s;", (int_id,))
+                    deleted = cur.rowcount > 0
+                except (ValueError, TypeError):
+                    pass
             conn.commit()
             cur.close()
             return deleted
         except Exception as e:
             print(f"DB delete error: {e}")
-            return False
+            raise  # Re-raise so the route can return the real error message
         finally:
             if 'conn' in locals():
                 release_connection(conn)
