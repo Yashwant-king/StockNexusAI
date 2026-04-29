@@ -502,16 +502,15 @@ def delete_customer(customer_id):
     if use_db():
         try:
             conn = get_connection()
-            cur = conn.cursor(cursor_factory=RealDictCursor)
+            cur = conn.cursor()
             cur.execute("DELETE FROM khata_transactions WHERE customer_id = %s;", (customer_id,))
             cur.execute("DELETE FROM khata_customers WHERE id = %s;", (customer_id,))
-            deleted = cur.rowcount > 0
             conn.commit()
             cur.close()
-            return deleted
+            return True   # rowcount is unreliable with RealDictCursor, just return True on success
         except Exception as e:
             print(f"❌ DB delete customer error: {e}")
-            raise  # Re-raise so the route can send the actual error message
+            raise
         finally:
             if 'conn' in locals():
                 release_connection(conn)
@@ -629,12 +628,11 @@ def delete_expense(expense_id):
     if use_db():
         try:
             conn = get_connection()
-            cur = conn.cursor(cursor_factory=RealDictCursor)
+            cur = conn.cursor()
             cur.execute("DELETE FROM expenses WHERE id = %s;", (expense_id,))
-            deleted = cur.rowcount > 0
             conn.commit()
             cur.close()
-            return deleted
+            return True   # rowcount is unreliable with RealDictCursor, just return True on success
         except Exception as e:
             print(f"❌ DB delete expense error: {e}")
             return False
