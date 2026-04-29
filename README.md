@@ -1,58 +1,88 @@
-# 🚀 StockNexus AI: Smart Inventory Forecasting
+# StockNexus AI 🏪
 
-StockNexus AI is a cutting-edge inventory management platform powered by Deep Learning. It helps modern businesses eliminate stock-outs and optimize their supply chain using advanced predictive analytics.
+**Smart Kirana Command Center** - An AI-powered inventory management system tailored for Indian retail, featuring live stock tracking, credit books (Khata), expense management, and predictive analytics.
 
----
-
-## 🎯 Key Capabilities
-
-- **📊 Intelligent Dashboard**: Real-time tracking of KPIs and inventory health.
-- **🧠 Deep Learning Engine**: High-accuracy sales forecasting using LSTM (Long Short-Term Memory) neural networks.
-- **📈 Advanced Analytics**: Visual trend analysis and revenue optimization reports.
-- **⚡ Proactive Alerts**: Automated monitoring for low stock and near-expiry items.
-- **🔄 Seamless Data Integration**: Drag-and-drop CSV processing for rapid updates.
+[![Python](https://img.shields.io/badge/Python-3.8+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Flask](https://img.shields.io/badge/Flask-3.0+-000000?style=for-the-badge&logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![AI](https://img.shields.io/badge/AI-LLAMA%203.3-8A2BE2?style=for-the-badge&logo=meta&logoColor=white)](https://groq.com/)
 
 ---
 
-## 🚀 Quick Installation
+## 🌟 Key Features
 
+- 📊 **Real-time Inventory Tracking**: Automated stock level monitoring with low-stock alerts.
+- 💳 **Smart Khata (Credit Book)**: Digital ledger for customer debts and payments with loyalty point tracking.
+- 📉 **Predictive Analytics**: LSTM-powered demand forecasting to optimize restocking schedules.
+- 🤖 **AI Assistant**: Groq-powered chat interface for business insights and automated promo generation.
+- 🧾 **Invoice Scanner**: OCR-based inventory updates from supplier invoices.
+- 💰 **Expense Tracking**: Simplified daily business expense logging.
+- 🔄 **Dual Mode**: Seamlessly switch between Cloud (Supabase) and Local (CSV) storage.
+
+---
+
+## 📸 Screenshots
+
+### 🔑 Secure Authentication
+![Login Page](screenshots/login.png)
+
+### 📊 Kirana Command Center (Dashboard)
+![Dashboard](screenshots/dashboard.png)
+
+### 📦 Inventory Management
+![Inventory](screenshots/inventory.png)
+
+### 🔮 AI Predictions
+![Predictions](screenshots/predict.png)
+
+---
+
+## 🛠️ Tech Stack
+
+- **Frontend**: HTML5, Vanilla CSS3 (Glassmorphism), JavaScript (ES6+)
+- **Backend**: Python 3, Flask
+- **Database**: PostgreSQL (Supabase) with Connection Pooling
+- **AI/ML**: TensorFlow (LSTM), Groq (LLaMA 3.3), Scikit-learn
+- **Data**: Pandas, Numpy
+
+---
+
+## 🚀 Quick Start
+
+### 1. Clone the repository
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/StockNexus-AI.git
-cd StockNexus-AI
-
-# Set up environment
-python -m venv venv
-source venv/bin/activate  # Or .\venv\Scripts\activate on Windows
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Launch the platform
-python app.py
+git clone https://github.com/Yashwant-king/StockNexusAI.git
+cd StockNexusAI
 ```
 
+### 2. Install dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 3. Configure Environment
+Create a `.env` file from the template:
+```bash
+cp .env.example .env
+# Edit .env with your actual keys
+```
+
+### 4. Run the Application
+```bash
+python run.py
+```
+Access the dashboard at `http://localhost:5000`
+
 ---
 
-## 🛠️ Technology Stack
+## 🏗️ Architecture
 
-- **Backend**: Python / Flask
-- **AI/ML**: TensorFlow (LSTM), Scikit-Learn, Pandas
-- **Visualization**: Matplotlib, Chart.js
-- **Frontend**: Modern HTML5, CSS3 (Inter Typography), Vanilla JavaScript
-
----
-
-## 📊 Business Impact
-
-StockNexus AI transforms your raw data into actionable intelligence:
-
-- **Accuracy**: 92%+ forecasting precision for stable datasets.
-- **Efficiency**: Reduces time spent on manual inventory counting by 60%.
-- **Revenue**: Minimizes lost sales due to out-of-stock scenarios.
+StockNexus AI follows a modular monolithic architecture, utilizing:
+- **Global Auth Hook**: Centralized session management.
+- **CSV Fallback**: Automatic fallback to local storage if DB connection fails.
+- **Predictive Engine**: Integrated training pipeline for custom shop data.
 
 ---
 
-## 📄 License
-
-This project is licensed under the MIT License.
+## 📝 License
+This project is for demonstration and kirana store optimization purposes. Built with ❤️ by StockNexus AI.

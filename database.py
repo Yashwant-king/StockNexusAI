@@ -1,12 +1,7 @@
-"""
-Database module for StockNexus AI.
-Handles all PostgreSQL (Supabase) connections and CRUD operations.
-Falls back to CSV mode if DATABASE_URL is not set.
-"""
-
 import os
 import pandas as pd
 import psycopg2
+from psycopg2 import pool
 from psycopg2.extras import RealDictCursor
 from dotenv import load_dotenv
 
@@ -16,11 +11,28 @@ DATABASE_URL = os.environ.get('DATABASE_URL')
 CSV_PATH = 'data_set/data.csv'
 COLUMNS = ['product_id', 'product_name', 'quantity_stock', 'minimum_stock_level', 'total_revenue', 'expiry_date']
 
+# Initialize connection pool if DATABASE_URL is available
+db_pool = None
+if DATABASE_URL:
+    try:
+        db_pool = pool.ThreadedConnectionPool(1, 20, DATABASE_URL)
+        print("✅ Database connection pool initialized")
+    except Exception as e:
+        print(f"❌ Failed to initialize connection pool: {e}")
 
 def get_connection():
-    """Get a PostgreSQL database connection."""
+    """Get a PostgreSQL database connection from the pool."""
+    if db_pool:
+        conn = db_pool.getconn()
+        # Set cursor factory to RealDictCursor for all connections from the pool
+        # Note: We need to ensure we return the connection to the pool later
+        return conn
     return psycopg2.connect(DATABASE_URL, cursor_factory=RealDictCursor)
 
+def release_connection(conn):
+    """Release a connection back to the pool."""
+    if db_pool and conn:
+        db_pool.putconn(conn)
 
 def init_db():
     """Create the inventory table if it doesn't exist."""
@@ -28,7 +40,7 @@ def init_db():
         return
     try:
         conn = get_connection()
-        cur = conn.cursor()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS inventory (
                 id SERIAL PRIMARY KEY,
@@ -43,10 +55,12 @@ def init_db():
         """)
         conn.commit()
         cur.close()
-        conn.close()
         print("✅ Database initialized successfully!")
     except Exception as e:
         print(f"❌ Database init error: {str(e)}")
+    finally:
+        if 'conn' in locals():
+            release_connection(conn)
 
 
 def use_db():
@@ -59,17 +73,19 @@ def get_all_items():
     if use_db():
         try:
             conn = get_connection()
-            cur = conn.cursor()
+            cur = conn.cursor(cursor_factory=RealDictCursor)
             cur.execute("SELECT product_id, product_name, quantity_stock, minimum_stock_level, total_revenue, expiry_date, created_at FROM inventory ORDER BY id;")
             rows = cur.fetchall()
             cur.close()
-            conn.close()
             if rows:
                 return pd.DataFrame([dict(r) for r in rows])
             else:
                 return pd.DataFrame(columns=COLUMNS)
         except Exception as e:
             print(f"DB read error: {e}. Falling back to CSV.")
+        finally:
+            if 'conn' in locals():
+                release_connection(conn)
 
     # CSV fallback
     if os.path.exists(CSV_PATH):
@@ -83,17 +99,19 @@ def get_last_updated():
     if use_db():
         try:
             conn = get_connection()
-            cur = conn.cursor()
+            cur = conn.cursor(cursor_factory=RealDictCursor)
             cur.execute("SELECT MAX(created_at) as last_updated FROM inventory;")
             row = cur.fetchone()
             cur.close()
-            conn.close()
             if row and row['last_updated']:
                 return row['last_updated'].strftime('%d %b %Y, %I:%M %p')
             return None
         except Exception as e:
             print(f"DB last_updated error: {e}")
             return None
+        finally:
+            if 'conn' in locals():
+                release_connection(conn)
 
     # CSV fallback — use file modification time
     if os.path.exists(CSV_PATH):
@@ -108,7 +126,7 @@ def add_item(product_id, product_name, quantity_stock, minimum_stock_level, tota
     if use_db():
         try:
             conn = get_connection()
-            cur = conn.cursor()
+            cur = conn.cursor(cursor_factory=RealDictCursor)
             
             # Check if it already exists
             cur.execute("SELECT id, quantity_stock FROM inventory WHERE product_id = %s;", (str(product_id),))
@@ -128,11 +146,13 @@ def add_item(product_id, product_name, quantity_stock, minimum_stock_level, tota
                 
             conn.commit()
             cur.close()
-            conn.close()
             print(f"✅ DB: Added/Updated {product_name} successfully")
             return True
         except Exception as e:
             print(f"❌ DB add item error: {e}. Falling back to CSV...")
+        finally:
+            if 'conn' in locals():
+                release_connection(conn)
 
     # CSV fallback (always runs if DB fails or is not configured)
     try:
@@ -166,15 +186,17 @@ def delete_item(item_id):
     if use_db():
         try:
             conn = get_connection()
-            cur = conn.cursor()
+            cur = conn.cursor(cursor_factory=RealDictCursor)
             cur.execute("DELETE FROM inventory WHERE id = %s;", (item_id,))
             conn.commit()
             cur.close()
-            conn.close()
             return True
         except Exception as e:
             print(f"DB delete error: {e}")
             return False
+        finally:
+            if 'conn' in locals():
+                release_connection(conn)
     return False
 
 
@@ -183,7 +205,7 @@ def update_item(item_id, product_name, quantity_stock, minimum_stock_level, tota
     if use_db():
         try:
             conn = get_connection()
-            cur = conn.cursor()
+            cur = conn.cursor(cursor_factory=RealDictCursor)
             cur.execute("""
                 UPDATE inventory 
                 SET product_name=%s, quantity_stock=%s, minimum_stock_level=%s, total_revenue=%s, expiry_date=%s
@@ -191,11 +213,13 @@ def update_item(item_id, product_name, quantity_stock, minimum_stock_level, tota
             """, (product_name, quantity_stock, minimum_stock_level, total_revenue, expiry_date, item_id))
             conn.commit()
             cur.close()
-            conn.close()
             return True
         except Exception as e:
             print(f"DB update error: {e}")
             return False
+        finally:
+            if 'conn' in locals():
+                release_connection(conn)
     return False
 
 
@@ -204,7 +228,7 @@ def bulk_upload_from_df(df):
     if use_db():
         try:
             conn = get_connection()
-            cur = conn.cursor()
+            cur = conn.cursor(cursor_factory=RealDictCursor)
             # Clear existing data
             cur.execute("DELETE FROM inventory;")
             # Insert all rows from dataframe
@@ -222,10 +246,12 @@ def bulk_upload_from_df(df):
                 ))
             conn.commit()
             cur.close()
-            conn.close()
             return True
         except Exception as e:
             print(f"❌ DB bulk upload error: {e}. Falling back to CSV...")
+        finally:
+            if 'conn' in locals():
+                release_connection(conn)
 
     # CSV fallback
     try:
@@ -251,7 +277,7 @@ def init_khata_db():
         return
     try:
         conn = get_connection()
-        cur = conn.cursor()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS khata_customers (
                 id SERIAL PRIMARY KEY,
@@ -278,10 +304,12 @@ def init_khata_db():
         
         conn.commit()
         cur.close()
-        conn.close()
         print("✅ Khata tables initialized!")
     except Exception as e:
         print(f"❌ Khata DB init error: {e}")
+    finally:
+        if 'conn' in locals():
+            release_connection(conn)
 
 
 def get_all_customers():
@@ -291,7 +319,7 @@ def get_all_customers():
     if use_db():
         try:
             conn = get_connection()
-            cur = conn.cursor()
+            cur = conn.cursor(cursor_factory=RealDictCursor)
             cur.execute("""
                 SELECT c.id, c.name, c.phone, c.created_at,
                     COALESCE(SUM(CASE WHEN t.type='udhar' THEN t.amount ELSE 0 END), 0) as total_udhar,
@@ -303,7 +331,6 @@ def get_all_customers():
             """)
             rows = cur.fetchall()
             cur.close()
-            conn.close()
             for r in rows:
                 customers.append({
                     'id': r['id'], 'name': r['name'], 'phone': r['phone'] or '',
@@ -315,6 +342,9 @@ def get_all_customers():
             return customers
         except Exception as e:
             print(f"❌ DB get customers error: {e}")
+        finally:
+            if 'conn' in locals():
+                release_connection(conn)
 
     # CSV fallback
     try:
@@ -341,15 +371,17 @@ def add_customer(name, phone):
     if use_db():
         try:
             conn = get_connection()
-            cur = conn.cursor()
+            cur = conn.cursor(cursor_factory=RealDictCursor)
             cur.execute("INSERT INTO khata_customers (name, phone) VALUES (%s, %s) RETURNING id;", (name, phone))
             new_id = cur.fetchone()['id']
             conn.commit()
             cur.close()
-            conn.close()
             return new_id
         except Exception as e:
             print(f"❌ DB add customer error: {e}")
+        finally:
+            if 'conn' in locals():
+                release_connection(conn)
 
     # CSV fallback
     try:
@@ -375,15 +407,17 @@ def add_transaction(customer_id, txn_type, amount, note=''):
     if use_db():
         try:
             conn = get_connection()
-            cur = conn.cursor()
+            cur = conn.cursor(cursor_factory=RealDictCursor)
             cur.execute("INSERT INTO khata_transactions (customer_id, type, amount, note) VALUES (%s, %s, %s, %s);",
                         (customer_id, txn_type, amount, note))
             conn.commit()
             cur.close()
-            conn.close()
             return True
         except Exception as e:
             print(f"❌ DB add transaction error: {e}")
+        finally:
+            if 'conn' in locals():
+                release_connection(conn)
 
     # CSV fallback
     try:
@@ -409,14 +443,16 @@ def get_customer_transactions(customer_id):
     if use_db():
         try:
             conn = get_connection()
-            cur = conn.cursor()
+            cur = conn.cursor(cursor_factory=RealDictCursor)
             cur.execute("SELECT * FROM khata_transactions WHERE customer_id = %s ORDER BY created_at DESC;", (customer_id,))
             rows = cur.fetchall()
             cur.close()
-            conn.close()
             return [dict(r) for r in rows]
         except Exception as e:
             print(f"❌ DB get transactions error: {e}")
+        finally:
+            if 'conn' in locals():
+                release_connection(conn)
 
     # CSV fallback
     try:
@@ -435,16 +471,18 @@ def delete_customer(customer_id):
     if use_db():
         try:
             conn = get_connection()
-            cur = conn.cursor()
+            cur = conn.cursor(cursor_factory=RealDictCursor)
             cur.execute("DELETE FROM khata_transactions WHERE customer_id = %s;", (customer_id,))
             cur.execute("DELETE FROM khata_customers WHERE id = %s;", (customer_id,))
             deleted = cur.rowcount > 0
             conn.commit()
             cur.close()
-            conn.close()
             return deleted
         except Exception as e:
             print(f"❌ DB delete customer error: {e}")
+        finally:
+            if 'conn' in locals():
+                release_connection(conn)
 
     # CSV fallback (only runs if DB is not configured or DB delete failed)
     deleted = False
@@ -474,7 +512,7 @@ def init_expense_db():
         return
     try:
         conn = get_connection()
-        cur = conn.cursor()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
         cur.execute("""
             CREATE TABLE IF NOT EXISTS expenses (
                 id SERIAL PRIMARY KEY,
@@ -486,24 +524,28 @@ def init_expense_db():
         """)
         conn.commit()
         cur.close()
-        conn.close()
         print("✅ Expense table initialized!")
     except Exception as e:
         print(f"❌ Expense DB init error: {e}")
+    finally:
+        if 'conn' in locals():
+            release_connection(conn)
 
 def get_all_expenses():
     """Get all expenses."""
     if use_db():
         try:
             conn = get_connection()
-            cur = conn.cursor()
+            cur = conn.cursor(cursor_factory=RealDictCursor)
             cur.execute("SELECT * FROM expenses ORDER BY id DESC;")
             rows = cur.fetchall()
             cur.close()
-            conn.close()
             return [dict(r) for r in rows]
         except Exception as e:
             print(f"❌ DB get expenses error: {e}")
+        finally:
+            if 'conn' in locals():
+                release_connection(conn)
 
     # CSV fallback
     try:
@@ -520,15 +562,17 @@ def add_expense(description, amount, date):
     if use_db():
         try:
             conn = get_connection()
-            cur = conn.cursor()
+            cur = conn.cursor(cursor_factory=RealDictCursor)
             cur.execute("INSERT INTO expenses (description, amount, date) VALUES (%s, %s, %s);",
                         (description, amount, date))
             conn.commit()
             cur.close()
-            conn.close()
             return True
         except Exception as e:
             print(f"❌ DB add expense error: {e}")
+        finally:
+            if 'conn' in locals():
+                release_connection(conn)
 
     # CSV fallback
     try:
@@ -554,14 +598,16 @@ def delete_expense(expense_id):
     if use_db():
         try:
             conn = get_connection()
-            cur = conn.cursor()
+            cur = conn.cursor(cursor_factory=RealDictCursor)
             cur.execute("DELETE FROM expenses WHERE id = %s;", (expense_id,))
             deleted = cur.rowcount > 0
             conn.commit()
             cur.close()
-            conn.close()
         except Exception as e:
             print(f"❌ DB delete expense error: {e}")
+        finally:
+            if 'conn' in locals():
+                release_connection(conn)
 
     # CSV fallback
     try:

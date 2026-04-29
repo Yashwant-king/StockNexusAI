@@ -338,36 +338,65 @@
             }
         }
 
-        function fakeLogin() {
-            const btn = document.querySelector('#signinForm .btn-login') || document.querySelector('.btn-login');
+        async function fakeLogin() {
+            const emailInput = document.getElementById('loginEmail');
+            const passwordInput = document.getElementById('loginPassword');
+            const email = emailInput.value;
+            const password = passwordInput.value;
+            
+            if (!email || !password) {
+                alert("Please enter both email and password");
+                return;
+            }
+
+            const btn = document.querySelector('#signinForm .btn-login');
             const spinner = document.getElementById('loginSpinner');
             const text = btn.querySelector('.btn-text');
+            const oldText = text.textContent;
+            
             text.textContent = 'Authenticating...';
             if(spinner) spinner.style.display = 'block';
 
-            setTimeout(() => {
-                document.getElementById('successOverlay').classList.add('show');
-                setTimeout(() => { window.location.href = '/dashboard'; }, 1500);
-            }, 1200);
+            try {
+                const formData = new FormData();
+                formData.append('email', email);
+                formData.append('password', password);
+                
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('successOverlay').classList.add('show');
+                    setTimeout(() => { window.location.href = '/dashboard'; }, 1500);
+                } else {
+                    alert(result.message || "Invalid credentials");
+                    text.textContent = oldText;
+                    if(spinner) spinner.style.display = 'none';
+                }
+            } catch (error) {
+                console.error("Login error:", error);
+                alert("An error occurred during login. Please try again.");
+                text.textContent = oldText;
+                if(spinner) spinner.style.display = 'none';
+            }
         }
 
-        function fakeSignup() {
-            const btn = document.querySelectorAll('.btn-login')[1];
-            const spinner = document.getElementById('signupSpinner');
-            const text = btn.querySelector('.btn-text');
-            text.textContent = 'Creating account...';
-            if(spinner) spinner.style.display = 'block';
-
-            setTimeout(() => {
-                document.getElementById('successOverlay').classList.add('show');
-                document.querySelector('.success-text').textContent = 'Account Created!';
-                setTimeout(() => { window.location.href = '/dashboard'; }, 1500);
-            }, 1500);
+        async function fakeSignup() {
+            // Sign up is currently simulated as login for this basic version
+            fakeLogin();
         }
 
         // Allow Enter key to submit
         document.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') fakeLogin();
+            if (e.key === 'Enter') {
+                const activeForm = document.getElementById('signupForm').classList.contains('hidden') ? 'signin' : 'signup';
+                if (activeForm === 'signin') fakeLogin();
+                else fakeSignup();
+            }
         });
     </script>
 </body>

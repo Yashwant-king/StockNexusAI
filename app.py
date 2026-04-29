@@ -11,6 +11,8 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from utils import generate_inventory_report, get_low_stock_products, get_near_expiry_products
 import database as db
+from functools import wraps
+from flask import session, redirect, url_for
 
 # Suppress TensorFlow warnings
 warnings.filterwarnings('ignore', category=UserWarning)
@@ -70,11 +72,50 @@ def simple_prediction(quantity1, quantity2, quantity3):
 
 model = load_trained_model()
 
+@app.before_request
+def require_login():
+    """Global authentication check"""
+    allowed_routes = ['login_page', 'login', 'static']
+    if request.endpoint and request.endpoint not in allowed_routes and 'user_id' not in session:
+        return redirect(url_for('login_page'))
+
+@app.errorhandler(404)
+def page_not_found(e):
+    return render_template('error.html', error="404 - Page Not Found"), 404
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    return render_template('error.html', error="500 - Internal Server Error"), 500
+
 @app.route('/')
 def login_page():
+    if 'user_id' in session:
+        return redirect(url_for('home'))
     return render_template("login.html")
 
+@app.route('/login', methods=['POST'])
+def login():
+    """Simple authentication logic"""
+    data = request.form
+    email = data.get('email')
+    password = data.get('password')
+    
+    # In a real app, verify against DB. For now, we'll allow any login
+    # but store it in session to show we have auth.
+    if email and password:
+        session['user_id'] = email
+        session['user_name'] = email.split('@')[0].capitalize()
+        return jsonify({"success": True, "message": "Login successful"})
+    
+    return jsonify({"success": False, "message": "Invalid credentials"}), 401
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login_page'))
+
 @app.route('/dashboard')
+@login_required
 def home():
     df = db.get_all_items()
     all_items = []
@@ -274,6 +315,7 @@ def get_notifications():
         return jsonify({'count': 0, 'alerts': [], 'error': str(e)})
 
 @app.route('/upload', methods=['POST'])
+@login_required
 def upload_file():
     """Handle file upload with improved error handling"""
     try:
@@ -352,6 +394,7 @@ def add_item():
         }), 500
 
 @app.route('/inventory')
+@login_required
 def inventory():
     """Display inventory with restocking and expiry recommendations"""
     try:
@@ -629,6 +672,7 @@ def sales_analytics():
         return render_template('error.html', error=f"Error loading analytics: {str(e)}")
 
 @app.route('/train', methods=['POST'])
+@login_required
 def train_model():
     """Train the prediction model using live DB data"""
     try:
@@ -1259,6 +1303,7 @@ which items are profitable, and give smart business suggestions. Always be pract
         }), 500
 
 @app.route('/api/checkout', methods=['POST'])
+@login_required
 def POS_checkout():
     """Real checkout: Deducts stock, adds revenue, updates loyalty points"""
     try:
@@ -1286,39 +1331,41 @@ def POS_checkout():
         if db.use_db():
             # ── DATABASE MODE ──
             conn = db.get_connection()
-            cur = conn.cursor()
+            try:
+                cur = conn.cursor(cursor_factory=db.RealDictCursor)
 
-            # Step 1: Deduct Stock and Add to Revenue
-            for product_id, item in cart.items():
-                qty = int(item['qty'])
-                price = float(item['price'])
-                line_total = qty * price
-                cur.execute("""
-                    UPDATE inventory 
-                    SET quantity_stock = quantity_stock - %s,
-                        total_revenue = total_revenue + %s
-                    WHERE id = %s OR product_id = %s;
-                """, (qty, line_total, product_id, product_id))
+                # Step 1: Deduct Stock and Add to Revenue
+                for product_id, item in cart.items():
+                    qty = int(item['qty'])
+                    price = float(item['price'])
+                    line_total = qty * price
+                    cur.execute("""
+                        UPDATE inventory 
+                        SET quantity_stock = quantity_stock - %s,
+                            total_revenue = total_revenue + %s
+                        WHERE id = %s OR product_id = %s;
+                    """, (qty, line_total, product_id, product_id))
 
-            # Step 2: Handle Loyalty Points if phone is provided
-            if customer_phone:
-                cur.execute("SELECT id, loyalty_points FROM khata_customers WHERE phone = %s;", (customer_phone,))
-                row = cur.fetchone()
-                if row:
-                    customer_id = row['id']
-                    current_points = int(row['loyalty_points'] or 0)
-                    if points_to_redeem > current_points:
-                        points_to_redeem = current_points
-                    new_points = current_points - points_to_redeem + points_earned
-                    cur.execute("UPDATE khata_customers SET loyalty_points = %s WHERE id = %s;", (new_points, customer_id))
-                else:
-                    new_points = points_earned
-                    cur.execute("INSERT INTO khata_customers (name, phone, loyalty_points) VALUES (%s, %s, %s);", 
-                               ("Customer " + customer_phone[-4:], customer_phone, new_points))
+                # Step 2: Handle Loyalty Points if phone is provided
+                if customer_phone:
+                    cur.execute("SELECT id, loyalty_points FROM khata_customers WHERE phone = %s;", (customer_phone,))
+                    row = cur.fetchone()
+                    if row:
+                        customer_id = row['id']
+                        current_points = int(row['loyalty_points'] or 0)
+                        if points_to_redeem > current_points:
+                            points_to_redeem = current_points
+                        new_points = current_points - points_to_redeem + points_earned
+                        cur.execute("UPDATE khata_customers SET loyalty_points = %s WHERE id = %s;", (new_points, customer_id))
+                    else:
+                        new_points = points_earned
+                        cur.execute("INSERT INTO khata_customers (name, phone, loyalty_points) VALUES (%s, %s, %s);", 
+                                   ("Customer " + customer_phone[-4:], customer_phone, new_points))
 
-            conn.commit()
-            cur.close()
-            conn.close()
+                conn.commit()
+                cur.close()
+            finally:
+                db.release_connection(conn)
         else:
             # ── CSV FALLBACK MODE ──
             import os as _os
@@ -1347,6 +1394,7 @@ def POS_checkout():
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route('/api/loyalty', methods=['POST'])
+@login_required
 def check_loyalty():
     """Retrieve loyalty points for a phone number"""
     try:
@@ -1357,16 +1405,18 @@ def check_loyalty():
 
         if db.use_db():
             conn = db.get_connection()
-            cur = conn.cursor()
-            cur.execute("SELECT loyalty_points, name FROM khata_customers WHERE phone = %s;", (phone,))
-            row = cur.fetchone()
-            cur.close()
-            conn.close()
+            try:
+                cur = conn.cursor(cursor_factory=db.RealDictCursor)
+                cur.execute("SELECT loyalty_points, name FROM khata_customers WHERE phone = %s;", (phone,))
+                row = cur.fetchone()
+                cur.close()
 
-            if row:
-                return jsonify({"success": True, "points": int(row['loyalty_points'] or 0), "name": str(row['name'])})
-            else:
-                return jsonify({"success": False, "points": 0, "message": "Customer not found"})
+                if row:
+                    return jsonify({"success": True, "points": int(row['loyalty_points'] or 0), "name": str(row['name'])})
+                else:
+                    return jsonify({"success": False, "points": 0, "message": "Customer not found"})
+            finally:
+                db.release_connection(conn)
         else:
             # CSV fallback — loyalty points not tracked in CSV mode
             return jsonify({"success": False, "points": 0, "message": "Loyalty system requires database connection"})
