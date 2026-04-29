@@ -18,12 +18,18 @@ def load_inventory_data(data_path='data_set/data.csv'):
         print(f"Error loading inventory data: {str(e)}")
         return None
 
-def get_low_stock_products(df, threshold=300):
-    """Get products with low stock levels"""
+def get_low_stock_products(df, threshold=None):
+    """Get products with low stock levels (below their minimum_stock_level)"""
     try:
-        low_stock = df[df['quantity_stock'] <= threshold][
-            ['product_id', 'product_name', 'quantity_stock', 'minimum_stock_level']
-        ]
+        if threshold is not None:
+            low_stock = df[df['quantity_stock'] <= threshold][
+                ['product_id', 'product_name', 'quantity_stock', 'minimum_stock_level']
+            ]
+        else:
+            # Use each product's own minimum_stock_level
+            low_stock = df[df['quantity_stock'].astype(float) <= df['minimum_stock_level'].astype(float)][
+                ['product_id', 'product_name', 'quantity_stock', 'minimum_stock_level']
+            ]
         return low_stock.to_dict(orient='records')
     except Exception as e:
         print(f"Error getting low stock products: {str(e)}")
@@ -32,11 +38,19 @@ def get_low_stock_products(df, threshold=300):
 def get_near_expiry_products(df, days_threshold=7):
     """Get products nearing expiry"""
     try:
-        # Convert expiry_date to datetime
-        df['expiry_date'] = pd.to_datetime(df['expiry_date'], format='%d/%m/%y', errors='coerce')
-        
-        # Calculate days until expiry
+        # Try multiple date formats for robustness
         today = pd.Timestamp.today()
+        expiry_dates = pd.to_datetime(df['expiry_date'], format='%d/%m/%y', errors='coerce')
+        # Retry with other formats for NaT values
+        mask_nat = expiry_dates.isna()
+        if mask_nat.any():
+            expiry_dates[mask_nat] = pd.to_datetime(df.loc[mask_nat, 'expiry_date'], format='%d/%m/%Y', errors='coerce')
+        mask_nat = expiry_dates.isna()
+        if mask_nat.any():
+            expiry_dates[mask_nat] = pd.to_datetime(df.loc[mask_nat, 'expiry_date'], format='%Y-%m-%d', errors='coerce')
+        
+        df = df.copy()
+        df['expiry_date'] = expiry_dates
         df['days_until_expiry'] = (df['expiry_date'] - today).dt.days
         
         # Filter products expiring within threshold
@@ -57,24 +71,30 @@ def calculate_inventory_metrics(df):
         
         # Basic counts
         metrics['total_products'] = int(len(df))
-        metrics['low_stock_count'] = int(len(df[df['quantity_stock'] <= 300]))
+        metrics['low_stock_count'] = int(len(df[df['quantity_stock'].astype(float) <= df['minimum_stock_level'].astype(float)]))
         
         # Stock levels
         metrics['average_stock_level'] = float(df['quantity_stock'].mean())
-        metrics['total_stock_value'] = float((df['quantity_stock'] * df.get('total_revenue', 0)).sum())
+        metrics['total_stock_value'] = float(df['total_revenue'].astype(float).sum())
         
         # Expiry analysis
         try:
-            df['expiry_date'] = pd.to_datetime(df['expiry_date'], format='%d/%m/%y', errors='coerce')
+            expiry_dates = pd.to_datetime(df['expiry_date'], format='%d/%m/%y', errors='coerce')
+            mask_nat = expiry_dates.isna()
+            if mask_nat.any():
+                expiry_dates[mask_nat] = pd.to_datetime(df.loc[mask_nat, 'expiry_date'], format='%d/%m/%Y', errors='coerce')
+            mask_nat = expiry_dates.isna()
+            if mask_nat.any():
+                expiry_dates[mask_nat] = pd.to_datetime(df.loc[mask_nat, 'expiry_date'], format='%Y-%m-%d', errors='coerce')
             today = pd.Timestamp.today()
-            df['days_until_expiry'] = (df['expiry_date'] - today).dt.days
-            metrics['near_expiry_count'] = int(len(df[df['days_until_expiry'] <= 7]))
+            days_until = (expiry_dates - today).dt.days
+            metrics['near_expiry_count'] = int((days_until <= 7).sum())
         except:
             metrics['near_expiry_count'] = 0
         
         # Sales metrics
-        metrics['total_revenue'] = float(df.get('total_revenue', 0).sum())
-        metrics['average_order_value'] = float(df.get('total_revenue', 0).mean())
+        metrics['total_revenue'] = float(df['total_revenue'].astype(float).sum())
+        metrics['average_order_value'] = float(df['total_revenue'].astype(float).mean())
         
         print(f"Calculated metrics: {metrics}")
         return metrics
@@ -179,9 +199,9 @@ def get_stock_alerts(df):
         return []
 
 def format_currency(amount):
-    """Format amount as currency"""
+    """Format amount as Indian Rupee currency"""
     try:
-        return f"${amount:,.2f}"
+        return f"\u20b9{amount:,.2f}"
     except:
         return str(amount)
 

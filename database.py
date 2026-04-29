@@ -432,7 +432,6 @@ def get_customer_transactions(customer_id):
 
 def delete_customer(customer_id):
     """Delete a customer and their transactions."""
-    deleted = False
     if use_db():
         try:
             conn = get_connection()
@@ -443,10 +442,12 @@ def delete_customer(customer_id):
             conn.commit()
             cur.close()
             conn.close()
+            return deleted
         except Exception as e:
             print(f"❌ DB delete customer error: {e}")
 
-    # CSV fallback
+    # CSV fallback (only runs if DB is not configured or DB delete failed)
+    deleted = False
     try:
         if os.path.exists(KHATA_CUSTOMERS_CSV):
             df = pd.read_csv(KHATA_CUSTOMERS_CSV)

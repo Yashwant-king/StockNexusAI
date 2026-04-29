@@ -17,6 +17,7 @@ warnings.filterwarnings('ignore', category=UserWarning)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'stocknexus-dev-key-change-in-production')
 
 # Configuration
 app.config['UPLOAD_FOLDER'] = 'data_set'
@@ -68,11 +69,6 @@ def simple_prediction(quantity1, quantity2, quantity3):
         return None
 
 model = load_trained_model()
-
-# Initialize the database (create tables if needed)
-with __import__('contextlib').suppress(Exception):
-    db.init_db()
-    db.init_khata_db()
 
 @app.route('/')
 def login_page():
@@ -1275,54 +1271,69 @@ def POS_checkout():
             return jsonify({"success": False, "error": "Cart is empty"}), 400
 
         total_bill = 0
-        conn = db.get_connection()
-        cur = conn.cursor()
 
-        # Step 1: Deduct Stock and Add to Revenue
+        # Calculate total bill from cart
         for product_id, item in cart.items():
             qty = int(item['qty'])
             price = float(item['price'])
             line_total = qty * price
             total_bill += line_total
 
-            # Update inventory in DB directly
-            cur.execute("""
-                UPDATE inventory 
-                SET quantity_stock = quantity_stock - %s,
-                    total_revenue = total_revenue + %s
-                WHERE id = %s OR product_id = %s;
-            """, (qty, line_total, product_id, product_id))
-
         # Determine points earned
         final_bill = total_bill - points_to_redeem
         points_earned = int(final_bill // 100)
 
-        # Step 2: Handle Loyalty Points if phone is provided
-        if customer_phone:
-            # Check if customer exists
-            cur.execute("SELECT id, loyalty_points FROM khata_customers WHERE phone = %s;", (customer_phone,))
-            row = cur.fetchone()
-            if row:
-                customer_id = row[0]
-                current_points = int(row[1] or 0)
-                
-                # Check if trying to redeem more than they have
-                if points_to_redeem > current_points:
-                    points_to_redeem = current_points
-                
-                new_points = current_points - points_to_redeem + points_earned
-                
-                # Update points
-                cur.execute("UPDATE khata_customers SET loyalty_points = %s WHERE id = %s;", (new_points, customer_id))
-            else:
-                # Create a new mini-profile for them
-                new_points = points_earned
-                cur.execute("INSERT INTO khata_customers (name, phone, loyalty_points) VALUES (%s, %s, %s);", 
-                           ("Customer " + customer_phone[-4:], customer_phone, new_points))
+        if db.use_db():
+            # ── DATABASE MODE ──
+            conn = db.get_connection()
+            cur = conn.cursor()
 
-        conn.commit()
-        cur.close()
-        conn.close()
+            # Step 1: Deduct Stock and Add to Revenue
+            for product_id, item in cart.items():
+                qty = int(item['qty'])
+                price = float(item['price'])
+                line_total = qty * price
+                cur.execute("""
+                    UPDATE inventory 
+                    SET quantity_stock = quantity_stock - %s,
+                        total_revenue = total_revenue + %s
+                    WHERE id = %s OR product_id = %s;
+                """, (qty, line_total, product_id, product_id))
+
+            # Step 2: Handle Loyalty Points if phone is provided
+            if customer_phone:
+                cur.execute("SELECT id, loyalty_points FROM khata_customers WHERE phone = %s;", (customer_phone,))
+                row = cur.fetchone()
+                if row:
+                    customer_id = row['id']
+                    current_points = int(row['loyalty_points'] or 0)
+                    if points_to_redeem > current_points:
+                        points_to_redeem = current_points
+                    new_points = current_points - points_to_redeem + points_earned
+                    cur.execute("UPDATE khata_customers SET loyalty_points = %s WHERE id = %s;", (new_points, customer_id))
+                else:
+                    new_points = points_earned
+                    cur.execute("INSERT INTO khata_customers (name, phone, loyalty_points) VALUES (%s, %s, %s);", 
+                               ("Customer " + customer_phone[-4:], customer_phone, new_points))
+
+            conn.commit()
+            cur.close()
+            conn.close()
+        else:
+            # ── CSV FALLBACK MODE ──
+            import os as _os
+            csv_path = app.config['DATA_PATH']
+            if _os.path.exists(csv_path):
+                csv_df = pd.read_csv(csv_path)
+                for product_id, item in cart.items():
+                    qty = int(item['qty'])
+                    price = float(item['price'])
+                    line_total = qty * price
+                    mask = csv_df['product_id'].astype(str) == str(product_id)
+                    if mask.any():
+                        csv_df.loc[mask, 'quantity_stock'] = csv_df.loc[mask, 'quantity_stock'].astype(int) - qty
+                        csv_df.loc[mask, 'total_revenue'] = csv_df.loc[mask, 'total_revenue'].astype(float) + line_total
+                csv_df.to_csv(csv_path, index=False)
 
         return jsonify({
             "success": True, 
@@ -1343,19 +1354,23 @@ def check_loyalty():
         phone = data.get('phone', '').strip()
         if not phone:
              return jsonify({"success": False, "points": 0})
-             
-        conn = db.get_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT loyalty_points, name FROM khata_customers WHERE phone = %s;", (phone,))
-        row = cur.fetchone()
-        cur.close()
-        conn.close()
 
-        if row:
-            return jsonify({"success": True, "points": int(row[0] or 0), "name": str(row[1])})
+        if db.use_db():
+            conn = db.get_connection()
+            cur = conn.cursor()
+            cur.execute("SELECT loyalty_points, name FROM khata_customers WHERE phone = %s;", (phone,))
+            row = cur.fetchone()
+            cur.close()
+            conn.close()
+
+            if row:
+                return jsonify({"success": True, "points": int(row['loyalty_points'] or 0), "name": str(row['name'])})
+            else:
+                return jsonify({"success": False, "points": 0, "message": "Customer not found"})
         else:
-            return jsonify({"success": False, "points": 0, "message": "Customer not found"})
-            
+            # CSV fallback — loyalty points not tracked in CSV mode
+            return jsonify({"success": False, "points": 0, "message": "Loyalty system requires database connection"})
+
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
