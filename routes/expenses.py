@@ -87,3 +87,39 @@ def api_delete_expense_url(expense_id):
         return jsonify({"success": False, "error": "Expense not found."}), 404
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+# ── Debug route: tests full add→delete cycle on live server ──────────────────
+@expenses_bp.route('/api/debug-expense-delete')
+def debug_expense_delete():
+    report = {}
+    try:
+        # Step 1: Check if DB is active
+        report['db_active'] = db.use_db()
+
+        # Step 2: Add a test expense
+        add_result = db.add_expense('__DEBUG_DELETE_TEST__', 1.0, '2000-01-01')
+        report['add_result'] = str(add_result)
+
+        # Step 3: Get all expenses and find the test one
+        expenses = db.get_all_expenses()
+        test_exp = next((e for e in expenses if e['description'] == '__DEBUG_DELETE_TEST__'), None)
+        report['found_test_expense'] = test_exp
+        report['total_expenses'] = len(expenses)
+
+        if test_exp:
+            # Step 4: Try to delete it
+            del_result = db.delete_expense(int(test_exp['id']))
+            report['delete_result'] = str(del_result)
+            # Step 5: Verify it's gone
+            expenses_after = db.get_all_expenses()
+            still_there = any(e['description'] == '__DEBUG_DELETE_TEST__' for e in expenses_after)
+            report['still_in_db_after_delete'] = still_there
+            report['status'] = 'SUCCESS' if not still_there else 'FAILED - still in DB'
+        else:
+            report['status'] = 'FAILED - could not find added expense'
+
+    except Exception as e:
+        report['exception'] = str(e)
+        report['status'] = 'EXCEPTION'
+
+    return jsonify(report)
