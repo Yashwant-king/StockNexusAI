@@ -101,9 +101,29 @@
         .empty i{font-size:2rem;display:block;margin-bottom:0.8rem;color:#334155;}
 
         @media(max-width:900px){.main-grid{grid-template-columns:1fr;}.stats-row{grid-template-columns:1fr;}}
+        /* Confirm Delete Modal */
+        .del-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;}
+        .del-overlay.active{display:flex;}
+        .del-box{background:#0f172a;border:1px solid rgba(239,68,68,0.3);border-radius:16px;padding:2rem;max-width:380px;width:90%;text-align:center;}
+        .del-box h3{color:#fff;font-size:1.1rem;font-weight:700;margin-bottom:0.5rem;}
+        .del-box p{color:#94a3b8;font-size:0.88rem;margin-bottom:1.5rem;}
+        .del-actions{display:flex;gap:10px;justify-content:center;}
+        .del-cancel{background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#94a3b8;padding:9px 22px;border-radius:10px;cursor:pointer;font-weight:600;font-size:0.88rem;}
+        .del-confirm{background:linear-gradient(135deg,#ef4444,#b91c1c);border:none;color:#fff;padding:9px 22px;border-radius:10px;cursor:pointer;font-weight:600;font-size:0.88rem;}
     </style>
 </head>
 <body>
+    <!-- Custom Delete Confirm Modal -->
+    <div class="del-overlay" id="khataDelModal">
+        <div class="del-box">
+            <h3>🗑️ Delete Customer?</h3>
+            <p id="khataDelMsg">This will delete the customer and all their transactions.</p>
+            <div class="del-actions">
+                <button class="del-cancel" onclick="closeKhataDelModal()">Cancel</button>
+                <button class="del-confirm" id="khataDelConfirm">Yes, Delete</button>
+            </div>
+        </div>
+    </div>
     <nav class="navbar">
         <div class="navbar-container">
             <a href="/dashboard" class="navbar-brand"><div class="brand-icon">🏪</div> StockNexus AI</a>
@@ -435,31 +455,39 @@
             } else if (action === 'whatsapp') {
                 messageCustomer(phone);
             } else if (action === 'delete') {
-                if (!confirm('Delete ' + name + ' and all their transactions?')) return;
-                fetch('/api/khata/delete-customer', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({customer_id: id})
-                })
-                .then(r => {
-                    if (!r.ok) throw new Error('Server error: ' + r.status);
-                    return r.json();
-                })
-                .then(data => {
-                    if (data.success) {
-                        showToast('✅ Customer deleted!', 'ok');
-                        if (selectedCustomerId === id) {
-                            document.getElementById('txnPanel').classList.remove('show');
-                            document.getElementById('txnPanelEmpty').style.display = 'block';
-                            selectedCustomerId = null;
+                document.getElementById('khataDelMsg').textContent = 'Delete "' + name + '" and all their transactions?';
+                document.getElementById('khataDelModal').classList.add('active');
+                document.getElementById('khataDelConfirm').onclick = function() {
+                    closeKhataDelModal();
+                    fetch('/api/khata/delete-customer', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({customer_id: id})
+                    })
+                    .then(r => {
+                        if (!r.ok) throw new Error('Server error: ' + r.status);
+                        return r.json();
+                    })
+                    .then(data => {
+                        if (data.success) {
+                            showToast('✅ Customer deleted!', 'ok');
+                            if (selectedCustomerId === id) {
+                                document.getElementById('txnPanel').classList.remove('show');
+                                document.getElementById('txnPanelEmpty').style.display = 'block';
+                                selectedCustomerId = null;
+                            }
+                            loadCustomers();
+                        } else {
+                            showToast('❌ ' + (data.error || 'Failed to delete'), 'err');
                         }
-                        loadCustomers();
-                    } else {
-                        showToast('❌ ' + (data.error || 'Failed to delete'), 'err');
-                    }
-                })
-                .catch(err => showToast('❌ Network error: ' + err.message, 'err'));
+                    })
+                    .catch(err => showToast('❌ Network error: ' + err.message, 'err'));
+                };
             }
+        }
+
+        function closeKhataDelModal() {
+            document.getElementById('khataDelModal').classList.remove('active');
         }
 
         async function loadTransactions(custId) {
