@@ -511,7 +511,7 @@ def delete_customer(customer_id):
             return deleted
         except Exception as e:
             print(f"❌ DB delete customer error: {e}")
-            return False   # ← stop here, don't fall through to CSV
+            raise  # Re-raise so the route can send the actual error message
         finally:
             if 'conn' in locals():
                 release_connection(conn)

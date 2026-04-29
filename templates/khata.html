@@ -334,7 +334,7 @@
                                 <button class="btn-sm btn-pay" onclick="selectAndPay(${c.id},'${c.name.replace(/'/g,"\\'")}','${(c.phone||'').replace(/'/g,"\\'")}',${c.balance})">+ Payment</button>
                                 ${c.balance > 0 ? `<button class="btn-sm" style="background:#f59e0b; color:white;" onclick="sendReminder('${c.phone}', ${c.balance}, '${c.name.replace(/'/g,"\\'")}')"><i class="fas fa-bell"></i></button>` : ''}
                                 <button class="btn-sm" style="background:#25D366; color:white;" onclick="messageCustomer('${c.phone}')"><i class="fab fa-whatsapp"></i></button>
-                                <button class="btn-sm btn-del" onclick="deleteCustomer(${c.id},'${c.name.replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i></button>
+                                <button class="btn-sm btn-del" onclick="event.stopPropagation(); deleteCustomer(${c.id},'${c.name.replace(/'/g,"\\'")}')"><i class="fas fa-trash"></i></button>
                             </div>
                         </div>
                         <div class="cust-bal">
