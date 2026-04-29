@@ -807,27 +807,48 @@
             }
             if (isListening) return;
             isListening = true;
+
+            // Open chat panel IMMEDIATELY so user can see feedback
+            if (document.getElementById('chatPanel').style.display !== 'flex') toggleChat();
+
             btn.innerHTML = '<i class="fas fa-microphone" style="color:red;"></i> Listening...';
             btn.style.borderColor = 'rgba(239,68,68,0.6)';
+
+            // Show a typing indicator in the chat
+            const msgs = document.getElementById('chatMessages');
+            const tid = 'voice-waiting';
+            msgs.innerHTML += `<div id="${tid}" class="msg-typing">🎤 Listening to your voice...</div>`;
+            msgs.scrollTop = msgs.scrollHeight;
+
             const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
             const recognition = new SR();
             recognition.lang = 'hi-IN';
             recognition.maxAlternatives = 1;
             recognition.onresult = e => {
                 const spoken = e.results[0][0].transcript;
+                document.getElementById(tid)?.remove();
                 btn.innerHTML = '<i class="fas fa-microphone"></i> Voice';
                 btn.style.borderColor = 'rgba(249,115,22,0.3)';
                 isListening = false;
-                if (document.getElementById('chatPanel').style.display !== 'flex') toggleChat();
                 setTimeout(() => {
                     document.getElementById('chatInput').value = spoken;
                     sendChatMessage();
-                }, 300);
+                }, 200);
             };
-            recognition.onerror = recognition.onend = () => {
+            recognition.onerror = () => {
+                document.getElementById(tid)?.remove();
+                msgs.innerHTML += `<div class="msg-typing" style="color:#fca5a5;">❌ Could not hear you. Please try again.</div>`;
                 btn.innerHTML = '<i class="fas fa-microphone"></i> Voice';
                 btn.style.borderColor = 'rgba(249,115,22,0.3)';
                 isListening = false;
+            };
+            recognition.onend = () => {
+                document.getElementById(tid)?.remove();
+                if (isListening) {
+                    btn.innerHTML = '<i class="fas fa-microphone"></i> Voice';
+                    btn.style.borderColor = 'rgba(249,115,22,0.3)';
+                    isListening = false;
+                }
             };
             recognition.start();
         }
