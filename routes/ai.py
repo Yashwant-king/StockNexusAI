@@ -23,26 +23,67 @@ def AI_Chat():
         if not user_query:
             return jsonify({"success": True, "reply": "I didn't hear anything. How can I help you today?"})
 
-        if not GROQ_API_KEY:
-            # Fallback simple rule-based response when no API key
-            inventory_df = db.get_all_items()
-            inv_count = len(inventory_df) if inventory_df is not None else 0
-            reply = f"I'm analyzing your {inv_count} products. Groq API key not set — please add GROQ_API_KEY to your .env file for full AI responses."
-            return jsonify({"success": True, "reply": reply})
-
-        # Build inventory context
+        # ── 1. INVENTORY CONTEXT ─────────────────────────────────────────────
         inventory_df = db.get_all_items()
         inv_count = len(inventory_df) if inventory_df is not None else 0
-        inv_summary = f"Total products in inventory: {inv_count}."
+        inv_summary = f"INVENTORY: {inv_count} products total."
         if inventory_df is not None and not inventory_df.empty:
             low_stock = inventory_df[
                 inventory_df['quantity_stock'].astype(float) <= inventory_df['minimum_stock_level'].astype(float)
             ]
             total_rev = float(inventory_df['total_revenue'].astype(float).sum())
-            inv_summary += f" Low stock items: {len(low_stock)}. Total revenue: ₹{total_rev:,.2f}."
-            # Top products by name
-            names = inventory_df['product_name'].head(5).tolist()
-            inv_summary += f" Sample products: {', '.join(names)}."
+            inv_summary += f" Low stock: {len(low_stock)} items. Total revenue: ₹{total_rev:,.2f}."
+            # List all products with stock
+            product_lines = []
+            for _, row in inventory_df.iterrows():
+                product_lines.append(
+                    f"{row.get('product_name','?')} (stock:{row.get('quantity_stock',0)}, min:{row.get('minimum_stock_level',0)}, expiry:{row.get('expiry_date','N/A')})"
+                )
+            inv_summary += f" Products: {'; '.join(product_lines[:20])}."  # limit to 20
+
+        # ── 2. KHATA CONTEXT ─────────────────────────────────────────────────
+        khata_summary = "KHATA (CREDIT BOOK): "
+        try:
+            customers = db.get_all_customers()
+            if customers:
+                total_outstanding = sum(c['balance'] for c in customers if c['balance'] > 0)
+                fully_paid = sum(1 for c in customers if c['balance'] <= 0)
+                khata_summary += (
+                    f"{len(customers)} customers. "
+                    f"Total outstanding dues: ₹{total_outstanding:,.2f}. "
+                    f"Fully paid customers: {fully_paid}. "
+                )
+                # List customers with balance
+                due_customers = [c for c in customers if c['balance'] > 0]
+                if due_customers:
+                    cust_lines = [f"{c['name']} owes ₹{c['balance']:,.2f}" for c in due_customers[:10]]
+                    khata_summary += f"Customers with dues: {'; '.join(cust_lines)}."
+            else:
+                khata_summary += "No customers yet."
+        except Exception as e:
+            khata_summary += f"Could not load khata data ({e})."
+
+        # ── 3. EXPENSES CONTEXT ──────────────────────────────────────────────
+        expenses_summary = "EXPENSES: "
+        try:
+            expenses = db.get_all_expenses()
+            if expenses:
+                total_expenses = sum(float(e['amount']) for e in expenses)
+                expenses_summary += f"{len(expenses)} expense records. Total spent: ₹{total_expenses:,.2f}. "
+                recent = expenses[:5]
+                exp_lines = [f"{e.get('description','?')} ₹{float(e.get('amount',0)):,.2f}" for e in recent]
+                expenses_summary += f"Recent expenses: {'; '.join(exp_lines)}."
+            else:
+                expenses_summary += "No expenses recorded yet."
+        except Exception as e:
+            expenses_summary += f"Could not load expense data ({e})."
+
+        # ── 4. BUILD FULL CONTEXT ────────────────────────────────────────────
+        full_context = f"{inv_summary}\n{khata_summary}\n{expenses_summary}"
+
+        if not GROQ_API_KEY:
+            reply = f"Groq API key not set. Here is your data summary:\n{full_context}"
+            return jsonify({"success": True, "reply": reply})
 
         client = Groq(api_key=GROQ_API_KEY)
         completion = client.chat.completions.create(
@@ -51,21 +92,25 @@ def AI_Chat():
                 {
                     "role": "system",
                     "content": (
-                        "You are StockNexus AI, a helpful and friendly inventory assistant for an Indian Kirana "
-                        "(grocery) store. Respond in the same language the user writes in (Hindi or English). "
-                        "Be concise, practical, and helpful. "
-                        f"Current inventory context: {inv_summary}"
+                        "You are StockNexus AI, a helpful and friendly business assistant for an Indian Kirana "
+                        "(grocery) store. You have full access to the store's data including inventory, "
+                        "customer credit book (khata), and expenses. "
+                        "Respond in the same language the user writes in (Hindi or English or Hinglish). "
+                        "Be concise, practical, and helpful. Use ₹ for currency. "
+                        "Here is the current live data from all tables:\n\n"
+                        f"{full_context}"
                     )
                 },
                 {"role": "user", "content": user_query}
             ],
-            max_tokens=500,
+            max_tokens=600,
             temperature=0.7
         )
         reply = completion.choices[0].message.content
         return jsonify({"success": True, "reply": reply})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)})
+
 
 
 @ai_bp.route('/api/daily-report')
