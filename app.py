@@ -39,7 +39,7 @@ db.init_expense_db()
 def require_login():
     """Global authentication check"""
     # Allow login, static files, and public dukaan catalog
-    allowed_routes = ['login_page', 'login', 'static', 'billing.dukaan', 'db_test']
+    allowed_routes = ['login_page', 'login', 'static', 'billing.dukaan']
     if request.endpoint and request.endpoint not in allowed_routes and 'user_id' not in session:
         return redirect(url_for('login_page'))
 
@@ -77,28 +77,6 @@ def login():
 def logout():
     session.clear()
     return redirect(url_for('login_page'))
-
-@app.route('/db-test')
-def db_test():
-    """Debug endpoint — tests Supabase connection and shows exact error."""
-    import os
-    results = {}
-    results['DATABASE_URL_set'] = bool(os.environ.get('DATABASE_URL'))
-    results['use_db'] = db.use_db()
-    results['pool_active'] = db.db_pool is not None
-    try:
-        conn = db.get_connection()
-        cur = conn.cursor()
-        cur.execute('SELECT COUNT(*) FROM inventory;')
-        count = cur.fetchone()[0]
-        cur.close()
-        db.release_connection(conn)
-        results['status'] = 'SUCCESS'
-        results['inventory_rows'] = count
-    except Exception as e:
-        results['status'] = 'FAILED'
-        results['error'] = str(e)
-    return jsonify(results)
 
 # Register Blueprints
 app.register_blueprint(inventory_bp)
