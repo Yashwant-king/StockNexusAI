@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 load_dotenv() # Force load .env so local tokens work properly
 
-DATABASE_URL = os.environ.get('DATABASE_URL')
+DATABASE_URL = os.environ.get('DATABASE_URL', '').strip() or None  # strip() removes accidental newlines
 CSV_PATH = 'data_set/data.csv'
 COLUMNS = ['product_id', 'product_name', 'quantity_stock', 'minimum_stock_level', 'total_revenue', 'expiry_date']
 
