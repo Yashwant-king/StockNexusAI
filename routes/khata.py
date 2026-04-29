@@ -43,14 +43,19 @@ def khata_add_transaction():
 
 @khata_bp.route('/khata/customer/<int:customer_id>')
 def khata_customer_details(customer_id):
+    """Show customer detail - served via khata.html with customer data passed."""
     try:
         customers = db.get_all_customers()
         customer = next((c for c in customers if c['id'] == customer_id), None)
         if not customer:
             return redirect(url_for('khata.khata_dashboard'))
         transactions = db.get_customer_transactions(customer_id)
-        return render_template('khata_details.html', customer=customer, transactions=transactions)
+        # Render main khata page with selected customer context
+        return render_template('khata.html', customers=customers,
+                               selected_customer=customer,
+                               transactions=transactions)
     except Exception as e:
+        print(f"Khata customer details error: {e}")
         return redirect(url_for('khata.khata_dashboard'))
 
 @khata_bp.route('/khata/delete_customer/<int:customer_id>')

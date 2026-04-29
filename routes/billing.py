@@ -1,7 +1,9 @@
 from flask import Blueprint, render_template, request, jsonify, current_app
 import pandas as pd
+import os
 import database as db
 from datetime import datetime
+from psycopg2.extras import RealDictCursor
 
 billing_bp = Blueprint('billing', __name__)
 
@@ -121,7 +123,7 @@ def POS_checkout():
         if db.use_db():
             conn = db.get_connection()
             try:
-                cur = conn.cursor(cursor_factory=db.RealDictCursor)
+                cur = conn.cursor(cursor_factory=RealDictCursor)
                 for pid, item in cart.items():
                     qty, price = int(item['qty']), float(item['price'])
                     cur.execute("UPDATE inventory SET quantity_stock=quantity_stock-%s, total_revenue=total_revenue+%s WHERE id=%s OR product_id=%s;", (qty, qty*price, pid, pid))
@@ -158,7 +160,7 @@ def check_loyalty():
         if db.use_db():
             conn = db.get_connection()
             try:
-                cur = conn.cursor(cursor_factory=db.RealDictCursor)
+                cur = conn.cursor(cursor_factory=RealDictCursor)
                 cur.execute("SELECT loyalty_points, name FROM khata_customers WHERE phone=%s;", (phone,))
                 row = cur.fetchone()
                 if row: return jsonify({"success": True, "points": int(row['loyalty_points'] or 0), "name": str(row['name'])})

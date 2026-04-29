@@ -42,7 +42,7 @@ def predict():
             # Use weighted average as simple prediction fallback
             prediction = (q1 * 0.2 + q2 * 0.3 + q3 * 0.5)
         except: pass
-    return render_template('predict.html', prediction=prediction, input_data=input_data)
+    return render_template('prediction.html', prediction=prediction, input_data=input_data)
 
 @analytics_bp.route('/api/predict_all')
 def predict_all_api():
@@ -57,6 +57,27 @@ def predict_all_api():
             predictions.append({'name': r['product_name'], 'prediction': round(pred, 2)})
         return jsonify(predictions)
     except: return jsonify([])
+
+@analytics_bp.route('/api/smart-insights')
+def smart_insights():
+    try:
+        df = db.get_all_items()
+        from utils import get_low_stock_products, get_near_expiry_products
+        low_stock = get_low_stock_products(df)
+        near_expiry = get_near_expiry_products(df)
+        
+        insights = []
+        if len(low_stock) > 0:
+            insights.append({"icon": "⚠️", "text": f"{len(low_stock)} items need restocking", "type": "warning"})
+        if len(near_expiry) > 0:
+            insights.append({"icon": "⏰", "text": f"{len(near_expiry)} items expiring soon", "type": "expiry"})
+        
+        if not insights:
+            insights.append({"icon": "✅", "text": "Inventory levels look healthy!", "type": "success"})
+            
+        return jsonify({"insights": insights})
+    except Exception as e:
+        return jsonify({"insights": [{"icon": "❌", "text": "Error loading insights", "type": "error"}]})
 
 @analytics_bp.route('/train', methods=['POST'])
 def train_model():

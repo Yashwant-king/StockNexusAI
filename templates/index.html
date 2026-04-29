@@ -810,7 +810,7 @@
                 if (document.getElementById('chatPanel').style.display !== 'flex') toggleChat();
                 setTimeout(() => {
                     document.getElementById('chatInput').value = spoken;
-                    sendChat();
+                    sendChatMessage();
                 }, 300);
             };
             recognition.onerror = recognition.onend = () => {

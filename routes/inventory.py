@@ -117,17 +117,21 @@ def add_item():
 def delete_item():
     try:
         data = request.get_json()
-        item_id = data.get('item_id')
+        # Frontend sends product_id; also support item_id for DB mode
+        item_id = data.get('item_id') or data.get('product_id')
         if not item_id:
-             return jsonify({"success": False, "error": "No ID provided"}), 400
-        
-        # Note: database.py delete_item uses DB ID if in DB mode, 
-        # or product_id if in CSV mode (though current implementation is limited)
-        # We need to handle this carefully.
-        success = db.delete_item(item_id)
+            return jsonify({"success": False, "error": "No ID provided"}), 400
+
+        if db.use_db():
+            # Try to delete by DB integer id first, then by product_id string
+            success = db.delete_item(item_id)
+        else:
+            # CSV mode: delete by product_id
+            success = db.delete_item_by_product_id(str(item_id))
+
         if success:
             return jsonify({"success": True, "message": "Item deleted!"}), 200
-        return jsonify({"success": False, "error": "Failed to delete."}), 500
+        return jsonify({"success": False, "error": "Failed to delete item."}), 500
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
@@ -148,6 +152,20 @@ def export_csv():
         return jsonify({'error': 'No data'}), 404
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@inventory_bp.route('/api/inventory-summary')
+def inventory_summary():
+    try:
+        df = db.get_all_items()
+        last_updated = db.get_last_updated()
+        from utils import calculate_inventory_metrics
+        metrics = calculate_inventory_metrics(df)
+        return jsonify({
+            "metrics": metrics,
+            "last_updated": last_updated
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @inventory_bp.route('/api/notifications')
 def get_notifications():

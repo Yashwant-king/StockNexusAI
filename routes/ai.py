@@ -1,42 +1,173 @@
-from flask import Blueprint, render_template, request, jsonify
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for
 import os
 import database as db
+from datetime import datetime
 
 ai_bp = Blueprint('ai', __name__)
 
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
+
+
 @ai_bp.route('/ai_assistant')
 def ai_assistant_page():
-    return render_template('ai_assistant.html')
+    # Redirect to dashboard where the AI chat panel is embedded
+    return redirect(url_for('inventory.home'))
 
-@ai_bp.route('/ai_chat', methods=['POST'])
+
+@ai_bp.route('/api/chat', methods=['POST'])
 def AI_Chat():
     try:
-        # Move import here to avoid crash if package missing
-        import groq
+        from groq import Groq
         data = request.get_json()
-        user_query = data.get('query', '')
+        user_query = data.get('message', data.get('query', ''))
         if not user_query:
-            return jsonify({"response": "I didn't hear anything. How can I help you today?"})
+            return jsonify({"success": True, "reply": "I didn't hear anything. How can I help you today?"})
 
-        # Fetch context
-        inventory = db.get_all_items()
-        customers = db.get_all_customers()
-        expenses = db.get_all_expenses()
+        if not GROQ_API_KEY:
+            # Fallback simple rule-based response when no API key
+            inventory_df = db.get_all_items()
+            inv_count = len(inventory_df) if inventory_df is not None else 0
+            reply = f"I'm analyzing your {inv_count} products. Groq API key not set — please add GROQ_API_KEY to your .env file for full AI responses."
+            return jsonify({"success": True, "reply": reply})
 
-        # Simple mock response if Groq fails or key missing
-        api_key = os.environ.get('GROQ_API_KEY')
-        if not api_key:
-            return jsonify({"response": "AI Assistant is currently in offline mode (GROQ_API_KEY missing). Based on your inventory, you have " + str(len(inventory)) + " products."})
+        # Build inventory context
+        inventory_df = db.get_all_items()
+        inv_count = len(inventory_df) if inventory_df is not None else 0
+        inv_summary = f"Total products in inventory: {inv_count}."
+        if inventory_df is not None and not inventory_df.empty:
+            low_stock = inventory_df[
+                inventory_df['quantity_stock'].astype(float) <= inventory_df['minimum_stock_level'].astype(float)
+            ]
+            total_rev = float(inventory_df['total_revenue'].astype(float).sum())
+            inv_summary += f" Low stock items: {len(low_stock)}. Total revenue: ₹{total_rev:,.2f}."
+            # Top products by name
+            names = inventory_df['product_name'].head(5).tolist()
+            inv_summary += f" Sample products: {', '.join(names)}."
 
-        # Real Groq logic would go here
-        return jsonify({"response": f"I'm analyzing your {len(inventory)} products. You have {len(customers)} customers in your credit book. How can I assist further?"})
+        client = Groq(api_key=GROQ_API_KEY)
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You are StockNexus AI, a helpful and friendly inventory assistant for an Indian Kirana "
+                        "(grocery) store. Respond in the same language the user writes in (Hindi or English). "
+                        "Be concise, practical, and helpful. "
+                        f"Current inventory context: {inv_summary}"
+                    )
+                },
+                {"role": "user", "content": user_query}
+            ],
+            max_tokens=500,
+            temperature=0.7
+        )
+        reply = completion.choices[0].message.content
+        return jsonify({"success": True, "reply": reply})
     except Exception as e:
-        return jsonify({"response": f"Error: {str(e)}"})
+        return jsonify({"success": False, "error": str(e)})
+
+
+@ai_bp.route('/api/daily-report')
+def daily_report():
+    """Generate a WhatsApp-ready daily business report."""
+    try:
+        inventory_df = db.get_all_items()
+        customers = db.get_all_customers()
+
+        total_products = len(inventory_df) if inventory_df is not None else 0
+        total_revenue = 0.0
+        low_stock_count = 0
+        near_expiry_count = 0
+
+        if inventory_df is not None and not inventory_df.empty:
+            total_revenue = float(inventory_df['total_revenue'].astype(float).sum())
+            low_stock_count = int(len(inventory_df[
+                inventory_df['quantity_stock'].astype(float) <= inventory_df['minimum_stock_level'].astype(float)
+            ]))
+            # Count near expiry (within 7 days)
+            today_ts = datetime.now()
+            for _, row in inventory_df.iterrows():
+                exp_str = str(row.get('expiry_date', ''))
+                for fmt in ['%d/%m/%y', '%d/%m/%Y', '%Y-%m-%d']:
+                    try:
+                        exp_date = datetime.strptime(exp_str, fmt)
+                        if 0 <= (exp_date - today_ts).days <= 7:
+                            near_expiry_count += 1
+                        break
+                    except Exception:
+                        continue
+
+        total_pending = sum(float(c.get('balance', 0)) for c in customers if float(c.get('balance', 0)) > 0)
+
+        today_str = datetime.now().strftime('%d %b %Y')
+
+        report = (
+            f"\U0001f680 *KIRANA STORE DAILY REPORT*\n"
+            f"\U0001f4c5 Date: {today_str}\n\n"
+            f"\U0001f4e6 *Inventory Summary:*\n"
+            f"\u2022 Total Products: {total_products}\n"
+            f"\u2022 Low Stock Alerts: {low_stock_count}\n"
+            f"\u2022 Near Expiry Items: {near_expiry_count}\n\n"
+            f"\U0001f4b0 *Revenue:*\n"
+            f"\u2022 Total Revenue: \u20b9{total_revenue:,.2f}\n\n"
+            f"\U0001f4d2 *Khata (Credit Book):*\n"
+            f"\u2022 Pending Dues: \u20b9{total_pending:,.2f}\n\n"
+            f"_Generated by StockNexus AI_ \U0001f916"
+        )
+
+        return jsonify({"success": True, "report": report})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+
+@ai_bp.route('/api/discount-suggestions')
+def discount_suggestions():
+    """Return AI-recommended discounts for near-expiry items."""
+    try:
+        inventory_df = db.get_all_items()
+        suggestions = []
+
+        if inventory_df is not None and not inventory_df.empty:
+            today_ts = datetime.now()
+            for _, row in inventory_df.iterrows():
+                exp_str = str(row.get('expiry_date', ''))
+                for fmt in ['%d/%m/%y', '%d/%m/%Y', '%Y-%m-%d']:
+                    try:
+                        exp_date = datetime.strptime(exp_str, fmt)
+                        days_left = (exp_date - today_ts).days
+                        if 0 < days_left <= 10:
+                            stock = int(float(row.get('quantity_stock', 0)))
+                            if stock > 0:
+                                original_price = float(row.get('total_revenue', 0))
+                                discount = int(min(50, max(15, 55 - days_left * 5)))
+                                sale_price = original_price * (1 - discount / 100)
+                                suggestions.append({
+                                    'product_name': str(row.get('product_name', '')),
+                                    'days_left': days_left,
+                                    'stock': stock,
+                                    'original_price': original_price,
+                                    'discount': discount,
+                                    'sale_price': round(sale_price, 2),
+                                    'estimated_savings': round(sale_price * stock, 2)
+                                })
+                        break
+                    except Exception:
+                        continue
+
+        # Sort by most urgent (fewest days left)
+        suggestions.sort(key=lambda x: x['days_left'])
+        return jsonify({"success": True, "suggestions": suggestions})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
 
 @ai_bp.route('/api/scan_invoice', methods=['POST'])
+@ai_bp.route('/scan-invoice', methods=['POST'])
 def scan_invoice_api():
     return jsonify({"success": True, "message": "OCR scanning is a premium feature. Please upgrade your plan.", "items": []})
 
+
 @ai_bp.route('/api/generate_promo', methods=['POST'])
 def generate_promo_api():
-    return jsonify({"success": True, "promo": "Special Offer! Get 10% off on all items today at our store! 🏪✨"})
+    return jsonify({"success": True, "promo": "Special Offer! Get 10% off on all items today at our store! \U0001f3ea\u2728"})

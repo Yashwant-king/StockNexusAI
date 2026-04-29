@@ -182,15 +182,21 @@ def add_item(product_id, product_name, quantity_stock, minimum_stock_level, tota
 
 
 def delete_item(item_id):
-    """Delete an item by its database ID."""
+    """Delete an item by its database ID or product_id string."""
     if use_db():
         try:
             conn = get_connection()
             cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute("DELETE FROM inventory WHERE id = %s;", (item_id,))
+            # Try integer ID first, fallback to product_id string
+            try:
+                int_id = int(item_id)
+                cur.execute("DELETE FROM inventory WHERE id = %s OR product_id = %s;", (int_id, str(item_id)))
+            except (ValueError, TypeError):
+                cur.execute("DELETE FROM inventory WHERE product_id = %s;", (str(item_id),))
+            deleted = cur.rowcount > 0
             conn.commit()
             cur.close()
-            return True
+            return deleted
         except Exception as e:
             print(f"DB delete error: {e}")
             return False
@@ -198,6 +204,23 @@ def delete_item(item_id):
             if 'conn' in locals():
                 release_connection(conn)
     return False
+
+
+def delete_item_by_product_id(product_id):
+    """Delete an item from CSV by its product_id (used in CSV-only mode)."""
+    try:
+        if not os.path.exists(CSV_PATH):
+            return False
+        df = pd.read_csv(CSV_PATH)
+        original_len = len(df)
+        df = df[df['product_id'].astype(str) != str(product_id)]
+        if len(df) < original_len:
+            df.to_csv(CSV_PATH, index=False)
+            return True
+        return False
+    except Exception as e:
+        print(f"CSV delete by product_id error: {e}")
+        return False
 
 
 def update_item(item_id, product_name, quantity_stock, minimum_stock_level, total_revenue, expiry_date):
