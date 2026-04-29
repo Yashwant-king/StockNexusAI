@@ -85,19 +85,36 @@ def analytics_dashboard():
 
 @analytics_bp.route('/predict', methods=['GET', 'POST'])
 def predict():
-    prediction = None
-    input_data = None
-    if request.method == 'POST':
-        try:
+    if request.method == 'GET':
+        return render_template('prediction.html', prediction=None, input_data=None)
+
+    # POST — handle both JSON (from fetch) and form data
+    try:
+        if request.is_json:
+            body = request.get_json()
+            q1 = float(body.get('quantity1', 0))
+            q2 = float(body.get('quantity2', 0))
+            q3 = float(body.get('quantity3', 0))
+        else:
             q1 = float(request.form.get('quantity1', 0))
             q2 = float(request.form.get('quantity2', 0))
             q3 = float(request.form.get('quantity3', 0))
-            input_data = [q1, q2, q3]
-            # Weighted average prediction
-            prediction = round(q1 * 0.2 + q2 * 0.3 + q3 * 0.5, 2)
-        except Exception:
-            pass
-    return render_template('prediction.html', prediction=prediction, input_data=input_data)
+
+        if q1 < 0 or q2 < 0 or q3 < 0:
+            return jsonify({"success": False, "error": "Sales values cannot be negative"}), 400
+
+        # Weighted average prediction (more weight on recent months)
+        prediction = round(q1 * 0.2 + q2 * 0.3 + q3 * 0.5, 2)
+
+        return jsonify({
+            "success": True,
+            "prediction": prediction,
+            "method": "Weighted Average (q1×0.2 + q2×0.3 + q3×0.5)"
+        })
+    except (ValueError, TypeError) as e:
+        return jsonify({"success": False, "error": f"Invalid input: {str(e)}"}), 400
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @analytics_bp.route('/api/predict_all')
