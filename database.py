@@ -511,11 +511,12 @@ def delete_customer(customer_id):
             return deleted
         except Exception as e:
             print(f"❌ DB delete customer error: {e}")
+            return False   # ← stop here, don't fall through to CSV
         finally:
             if 'conn' in locals():
                 release_connection(conn)
 
-    # CSV fallback (only runs if DB is not configured or DB delete failed)
+    # CSV fallback (only runs if DATABASE_URL is not set)
     deleted = False
     try:
         if os.path.exists(KHATA_CUSTOMERS_CSV):
