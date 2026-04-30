@@ -194,11 +194,12 @@
             _pendingDeleteId = id;
             document.getElementById('deleteModal').classList.add('active');
             document.getElementById('deleteModalConfirm').onclick = function() {
+                const idToDelete = _pendingDeleteId;   // capture BEFORE closeDeleteModal clears it
                 closeDeleteModal();
                 fetch('/api/delete-expense', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ expense_id: _pendingDeleteId })
+                    body: JSON.stringify({ expense_id: idToDelete })
                 })
                 .then(r => {
                     if (!r.ok) throw new Error('Server error: ' + r.status);
